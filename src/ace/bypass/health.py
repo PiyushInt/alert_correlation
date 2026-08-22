@@ -17,17 +17,50 @@ State = Literal["OK", "DEGRADED", "BYPASS"]
 def get_pipeline_lag(r: redis.Redis) -> int | None:
     """
     Measures pipeline lag. Returns None ("lag unknown") if the consumer group
-    doesn't exist (which is true for Phase 3), or if the stream doesn't exist.
+    doesn't exist, or if the stream doesn't exist.
+    Lag is the age of the oldest unread entry (either pending or undelivered).
     """
     try:
         groups = r.xinfo_groups("alerts.raw")
-        if not groups:
-            # No consumer groups exist, lag is unknown
+        last_delivered_id = None
+        for g in groups:
+            g_name = g["name"].decode("utf-8") if isinstance(g["name"], bytes) else str(g["name"])
+            if g_name == settings.CONSUMER_GROUP:
+                last_delivered_id = g.get("last-delivered-id")
+                if isinstance(last_delivered_id, bytes):
+                    last_delivered_id = last_delivered_id.decode("utf-8")
+                break
+
+        if last_delivered_id is None:
             return None
 
-        # In Phase 5, we will actually compute lag based on the consumer group's PEL
-        # or the oldest unread entry.
-        return None
+        # 1. Check PEL
+        pending = r.xpending("alerts.raw", settings.CONSUMER_GROUP)
+        if pending and pending["pending"] > 0:
+            oldest_id = (
+                pending["min"].decode("utf-8")
+                if isinstance(pending["min"], bytes)
+                else str(pending["min"])
+            )
+            ts_ms = int(oldest_id.split("-")[0])
+            lag_seconds = int(datetime.now(UTC).timestamp() - (ts_ms / 1000.0))
+            return lag_seconds
+
+        # 2. Check undelivered
+        if last_delivered_id:
+            # '(' means exclusive
+            unread = r.xrange("alerts.raw", f"({last_delivered_id}", "+", count=1)
+            if unread:
+                first_id = unread[0][0]
+                oldest_id = (
+                    first_id.decode("utf-8") if isinstance(first_id, bytes) else str(first_id)
+                )
+                ts_ms = int(oldest_id.split("-")[0])
+                return int(datetime.now(UTC).timestamp() - (ts_ms / 1000.0))
+
+        # No pending entries -> no lag
+        return 0
+
     except redis.exceptions.ResponseError as e:
         if "no such key" in str(e).lower():
             return None

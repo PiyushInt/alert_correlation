@@ -25,6 +25,10 @@ class Alert(Base):
         ForeignKey("components.id", ondelete="SET NULL"), nullable=True
     )
     component_unresolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    occurrence_count: Mapped[int] = mapped_column(nullable=False, default=1, server_default="1")
+    resolves_alert_id: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("alerts.id", ondelete="SET NULL"), nullable=True
+    )
     severity: Mapped[str] = mapped_column(String(50), nullable=False)
     labels: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     annotations: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
@@ -37,6 +41,7 @@ class Alert(Base):
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     received_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_seen_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     incident_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("incidents.id", ondelete="SET NULL"), nullable=True
