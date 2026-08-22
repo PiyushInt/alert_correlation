@@ -1,0 +1,40 @@
+Metadata-Version: 2.4
+Name: ace
+Version: 0.1.0
+Summary: Alert Correlation Engine
+Requires-Python: >=3.12
+Description-Content-Type: text/markdown
+Requires-Dist: fastapi[standard]>=0.112.0
+Requires-Dist: uvicorn>=0.30.5
+Requires-Dist: pydantic>=2.8.2
+Requires-Dist: pydantic-settings>=2.4.0
+Requires-Dist: sqlalchemy>=2.0.32
+Requires-Dist: psycopg[binary]>=3.2.1
+Requires-Dist: redis>=5.0.8
+Requires-Dist: alembic>=1.13.2
+Requires-Dist: networkx>=3.3
+Requires-Dist: xxhash>=3.4.1
+Requires-Dist: datasketch>=1.6.4
+Requires-Dist: mlxtend>=0.23.1
+Requires-Dist: pyroaring>=0.4.5
+Requires-Dist: rapidfuzz>=3.9.6
+Provides-Extra: dev
+Requires-Dist: pytest>=8.3.2; extra == "dev"
+Requires-Dist: hypothesis>=6.111.1; extra == "dev"
+Requires-Dist: ruff>=0.6.1; extra == "dev"
+Requires-Dist: mypy>=1.11.1; extra == "dev"
+Requires-Dist: pre-commit>=3.8.0; extra == "dev"
+Requires-Dist: httpx>=0.27.0; extra == "dev"
+
+# Alert Correlation Engine
+
+An intelligent engine that normalizes, deduplicates, and correlates alerts from disparate monitoring tools to reduce alert noise and identify root causes.
+
+## Getting Started
+
+1. Clone the repository.
+2. Ensure you have Python 3.12 installed.
+3. Set up the virtual environment: `python3.12 -m venv .venv && source .venv/bin/activate`
+4. Install dependencies: `pip install -e ".[dev]"`
+5. Start local infrastructure: `docker compose -f docker-compose.services.yml up -d`
+6. Run the application: `./scripts/dev.sh`
