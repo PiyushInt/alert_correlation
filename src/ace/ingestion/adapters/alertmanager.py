@@ -3,9 +3,8 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
-from ace.db.repositories.components import ComponentRepository
 from ace.ingestion.adapters.base import BaseAdapter
-from ace.ingestion.models import NormalisedAlert
+from ace.ingestion.models import Candidate, NormalisedAlert
 
 
 class AlertmanagerAdapter(BaseAdapter):
@@ -22,10 +21,44 @@ class AlertmanagerAdapter(BaseAdapter):
         "info": "info",
     }
 
+    def extract_identifiers(self, alert_data: dict[str, Any]) -> list[Candidate]:
+        candidates = []
+        labels = alert_data.get("labels", {})
+
+        # Priority order for Prometheus / Blackbox
+        # 1. Mountpoint (most specific for filesystems)
+        if "mountpoint" in labels:
+            candidates.append(Candidate(value=labels["mountpoint"], field_name="mountpoint"))
+
+        # 2. Target instance for blackbox probes
+        if labels.get("job") == "blackbox" or "Probe" in labels.get("alertname", ""):
+            if "instance" in labels:
+                candidates.append(Candidate(value=labels["instance"], field_name="instance"))
+
+        # 3. Component label (if explicitly provided)
+        if "component" in labels:
+            candidates.append(Candidate(value=labels["component"], field_name="component"))
+
+        # 4. Instance, pod, service, job (decreasing specificity)
+        if "instance" in labels and labels.get("job") != "blackbox":
+            candidates.append(Candidate(value=labels["instance"], field_name="instance"))
+        if "pod" in labels:
+            candidates.append(Candidate(value=labels["pod"], field_name="pod"))
+        if "service" in labels:
+            candidates.append(Candidate(value=labels["service"], field_name="service"))
+        if "job" in labels:
+            candidates.append(Candidate(value=labels["job"], field_name="job"))
+        if "alertname" in labels:
+            candidates.append(Candidate(value=labels["alertname"], field_name="alertname"))
+
+        return candidates
+
     def normalize(self, payload: Any, session: Session) -> list[NormalisedAlert]:
         alerts_list = payload.get("alerts", [])
         normalised_alerts = []
-        component_repo = ComponentRepository(session)
+        from ace.ingestion.resolver import Resolver
+
+        resolver = Resolver(session)
 
         for alert_data in alerts_list:
             labels = alert_data.get("labels", {})
@@ -62,27 +95,17 @@ class AlertmanagerAdapter(BaseAdapter):
                 except Exception:
                     pass
 
-            # Component resolution v1: EXACT and ALIAS lookup ONLY
-            # Usually the instance or job is a good proxy for component alias
-            alias_to_lookup = labels.get("instance") or labels.get("job") or labels.get("alertname")
-            component_id = None
-            component_unresolved = True
+            source_tool = "prometheus"
+            if labels.get("job") == "blackbox" or "Probe" in labels.get("alertname", ""):
+                source_tool = "blackbox"
 
-            if alias_to_lookup:
-                # 1. Exact canonical name match
-                component = component_repo.get_by_name(alias_to_lookup)
-                if component:
-                    component_id = component.id
-                    component_unresolved = False
-                else:
-                    # 2. Alias match
-                    component = component_repo.get_by_alias(alias_to_lookup, "prometheus")
-                    if component:
-                        component_id = component.id
-                        component_unresolved = False
+            candidates = self.extract_identifiers(alert_data)
+            component_id, component_unresolved = resolver.resolve(candidates, source_tool)
 
             if component_unresolved:
                 import logging
+
+                alias_to_lookup = candidates[0].value if candidates else "none"
 
                 logging.getLogger(__name__).warning(
                     f"Component unresolved for alert {external_id} "
@@ -91,7 +114,7 @@ class AlertmanagerAdapter(BaseAdapter):
 
             normalised_alerts.append(
                 NormalisedAlert(
-                    source_tool="prometheus",
+                    source_tool=source_tool,
                     external_id=external_id,
                     severity=severity,
                     component_id=component_id,

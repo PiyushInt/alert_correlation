@@ -1,0 +1,42 @@
+{
+  "receiver": "webhooks",
+  "status": "firing",
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {
+        "alertname": "CartEndpointDown",
+        "component": "cart",
+        "instance": "cart:8080",
+        "job": "blackbox",
+        "severity": "critical"
+      },
+      "annotations": {
+        "summary": "Frontend is down (synthetic check)"
+      },
+      "startsAt": "2026-08-21T14:02:21.971Z",
+      "endsAt": "0001-01-01T00:00:00Z",
+      "generatorURL": "http://4bc4ab9f6047:9090/graph?g0.expr=probe_success%7Binstance%3D%22cart%3A8080%22%2Cjob%3D%22blackbox%22%7D+%3D%3D+0&g0.tab=1",
+      "fingerprint": "035cf03bf9be1598"
+    }
+  ],
+  "notification_reason": "first notification",
+  "groupLabels": {
+    "alertname": "CartEndpointDown"
+  },
+  "commonLabels": {
+    "alertname": "CartEndpointDown",
+    "component": "cart",
+    "instance": "cart:8080",
+    "job": "blackbox",
+    "severity": "critical"
+  },
+  "commonAnnotations": {
+    "summary": "Frontend is down (synthetic check)"
+  },
+  "routeLabels": {},
+  "externalURL": "http://5b8e6e26ddc2:9093",
+  "version": "4",
+  "groupKey": "{}:{alertname=\"CartEndpointDown\"}",
+  "truncatedAlerts": 0
+}

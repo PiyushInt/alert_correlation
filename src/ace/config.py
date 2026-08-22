@@ -41,7 +41,8 @@ class Settings(BaseSettings):
     )
     FLAP_WINDOW: int = Field(default=900, description="Seconds window for flapping state detection")
     FUZZY_MATCH_THRESHOLD: float = Field(
-        default=0.85, description="String similarity threshold for text clustering"
+        default=80.0,
+        description="Rapidfuzz WRatio score (0-100) below which fuzzy matches are rejected",
     )
     MIN_MAP_COVERAGE: float = Field(
         default=0.7, description="Minimum percentage of alerts needing mapped components"
