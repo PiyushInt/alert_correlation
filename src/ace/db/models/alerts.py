@@ -24,6 +24,7 @@ class Alert(Base):
     component_id: Mapped[uuid.UUID | None] = mapped_column(
         ForeignKey("components.id", ondelete="SET NULL"), nullable=True
     )
+    component_unresolved: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     severity: Mapped[str] = mapped_column(String(50), nullable=False)
     labels: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     annotations: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)

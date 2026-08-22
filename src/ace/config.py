@@ -25,6 +25,9 @@ class Settings(BaseSettings):
         default=300,
         description="Maximum permitted seconds of lag before failing open to RAW routing",
     )
+    CANARY_ENABLED: bool = Field(
+        default=False, description="Enable automatic canary runs in lifespan"
+    )
     CANARY_INTERVAL: int = Field(default=60, description="Seconds between canary alert injections")
     CANARY_TIMEOUT: int = Field(
         default=120, description="Seconds before canary failure triggers bypass mode"

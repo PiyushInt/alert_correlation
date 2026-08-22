@@ -1,4 +1,3 @@
-
 with open("estate/capture/label.py") as f:
     content = f.read()
 

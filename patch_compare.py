@@ -1,4 +1,3 @@
-
 with open("estate/capture/compare.py") as f:
     content = f.read()
 
