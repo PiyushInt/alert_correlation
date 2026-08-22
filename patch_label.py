@@ -1,5 +1,5 @@
-import sys
-with open('estate/capture/label.py', 'r') as f:
+
+with open("estate/capture/label.py") as f:
     content = f.read()
 
 fallback_code = """
@@ -24,8 +24,10 @@ RULE_COMPONENTS = get_rule_components()
 """
 
 content = content.replace("def main():", fallback_code + "\ndef main():")
-content = content.replace("comp = labels.get(\"component\") or labels.get(\"instance\") or labels.get(\"pod\") or labels.get(\"host\") or \"\"", 
-                          "comp = labels.get(\"component\") or RULE_COMPONENTS.get(name) or labels.get(\"instance\") or labels.get(\"pod\") or labels.get(\"host\") or \"\"")
+content = content.replace(
+    'comp = labels.get("component") or labels.get("instance") or labels.get("pod") or labels.get("host") or ""',
+    'comp = labels.get("component") or RULE_COMPONENTS.get(name) or labels.get("instance") or labels.get("pod") or labels.get("host") or ""',
+)
 
-with open('estate/capture/label.py', 'w') as f:
+with open("estate/capture/label.py", "w") as f:
     f.write(content)

@@ -1,5 +1,5 @@
-import sys
-with open('estate/capture/compare.py', 'r') as f:
+
+with open("estate/capture/compare.py") as f:
     content = f.read()
 
 fallback_code = """
@@ -24,8 +24,10 @@ RULE_COMPONENTS = get_rule_components()
 """
 
 content = content.replace("def main():", fallback_code + "\ndef main():")
-content = content.replace("component = labels.get(\"instance\") or labels.get(\"pod\") or labels.get(\"host\") or \"Unknown\"", 
-                          "component = labels.get(\"component\") or RULE_COMPONENTS.get(alertname) or labels.get(\"instance\") or labels.get(\"pod\") or labels.get(\"host\") or \"Unknown\"")
+content = content.replace(
+    'component = labels.get("instance") or labels.get("pod") or labels.get("host") or "Unknown"',
+    'component = labels.get("component") or RULE_COMPONENTS.get(alertname) or labels.get("instance") or labels.get("pod") or labels.get("host") or "Unknown"',
+)
 
-with open('estate/capture/compare.py', 'w') as f:
+with open("estate/capture/compare.py", "w") as f:
     f.write(content)
