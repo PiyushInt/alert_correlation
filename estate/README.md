@@ -23,3 +23,4 @@ The scenario demonstrates cross-tool correlation by targeting a shared volume:
 
 ## Teardown
 `docker-compose down -v`
+Note: The colima loopback mount for valkey-data must be re-run after every `colima stop` using `./setup-volume.sh`.

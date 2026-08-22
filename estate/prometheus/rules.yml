@@ -2,31 +2,41 @@ groups:
 - name: demo_alerts
   rules:
   - alert: HighErrorRate
-    expr: rate(http_requests_total{status=~"5.."}[1m]) > 0.05
-    for: 1m
+    expr: sum(rate(dotnet_exceptions_total{exported_job="cart"}[5m])) > 1.5
+    for: 30s
     labels:
       severity: page
     annotations:
-      summary: High error rate on {{ $labels.instance }}
+      summary: High exception rate on {{ $labels.instance }}
 
-  - alert: HighLatency
-    expr: histogram_quantile(0.99, rate(http_request_duration_seconds_bucket[5m])) > 1.0
-    for: 2m
-    labels:
-      severity: warning
-    annotations:
-      summary: High latency on {{ $labels.instance }}
-
-  - alert: FrontendDown
-    expr: probe_success{job="blackbox"} == 0
+  - alert: CartDown
+    expr: absent(dotnet_exceptions_total{exported_job="cart"}) == 1
     for: 1m
     labels:
       severity: critical
+      component: cart
+    annotations:
+      summary: Cart service metrics are absent
+
+  - alert: HighCpuUsage
+    expr: 1 - avg(rate(node_cpu_seconds_total{mode="idle"}[1m])) by (instance) > 0.8
+    for: 1m
+    labels:
+      severity: warning
+    annotations:
+      summary: High CPU usage on {{ $labels.instance }}
+
+  - alert: CartEndpointDown
+    expr: probe_success{job="blackbox", instance="cart:8080"} == 0
+    for: 1m
+    labels:
+      severity: critical
+      component: cart
     annotations:
       summary: Frontend is down (synthetic check)
 
   - alert: HighDiskUsage
-    expr: (node_filesystem_size_bytes{mountpoint="/valkey-data"} - node_filesystem_free_bytes{mountpoint="/valkey-data"}) / node_filesystem_size_bytes{mountpoint="/valkey-data"} > 0.85
+    expr: (node_filesystem_size_bytes{mountpoint="/mnt/valkey-data"} - node_filesystem_free_bytes{mountpoint="/mnt/valkey-data"}) / node_filesystem_size_bytes{mountpoint="/mnt/valkey-data"} > 0.85
     for: 1m
     labels:
       severity: critical
@@ -34,17 +44,9 @@ groups:
       summary: High disk usage on {{ $labels.instance }} volume {{ $labels.mountpoint }}
 
   - alert: HighMemoryUsage
-    expr: (container_memory_working_set_bytes / container_spec_memory_limit_bytes) > 0.85
+    expr: 1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.85
     for: 1m
     labels:
       severity: warning
     annotations:
-      summary: High memory usage on {{ $labels.name }}
-
-  - alert: ContainerRestarted
-    expr: changes(container_start_time_seconds[5m]) > 0
-    for: 1m
-    labels:
-      severity: warning
-    annotations:
-      summary: Container {{ $labels.name }} has restarted
+      summary: High memory usage on {{ $labels.instance }}

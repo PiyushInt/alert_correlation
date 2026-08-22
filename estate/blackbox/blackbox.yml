@@ -4,3 +4,5 @@ modules:
     http:
       preferred_ip_protocol: "ip4"
       valid_status_codes: []
+  tcp_connect:
+    prober: tcp

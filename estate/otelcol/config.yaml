@@ -12,17 +12,24 @@ processors:
     send_batch_size: 1024
 
 exporters:
-  otlp/engine:
-    endpoint: http://host.docker.internal:8000/v1/traces
+  otlphttp/engine:
+    endpoint: http://host.docker.internal:8000
     tls:
       insecure: true
   
   debug:
     verbosity: detailed
 
+  prometheus:
+    endpoint: "0.0.0.0:8889"
+    metric_expiration: 60s
+
 service:
   pipelines:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlp/engine, debug]
+      exporters: [otlphttp/engine, debug]
+    metrics:
+      receivers: [otlp]
+      exporters: [prometheus]

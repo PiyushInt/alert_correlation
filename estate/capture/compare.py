@@ -9,11 +9,13 @@ def parse_iso(dt_str):
     dt_str = dt_str.replace("Z", "+00:00")
     return datetime.datetime.fromisoformat(dt_str)
 
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("fault_filter", help="<fault_type|latest>")
-    parser.add_argument("--faults-file", default=os.path.join(os.path.dirname(__file__), "..", "captures", "faults.jsonl"))
-    parser.add_argument("--payloads-dir", default=os.path.join(os.path.dirname(__file__), "..", "captures", "payloads"))
+    parser.add_argument("--faults-file", default=os.path.join(REPO_ROOT, "estate", "captures", "faults.jsonl"))
+    parser.add_argument("--payloads-dir", default=os.path.join(REPO_ROOT, "estate", "captures", "payloads"))
     args = parser.parse_args()
     
     # Read faults
@@ -24,7 +26,7 @@ def main():
             for line in reversed(lines):
                 if not line.strip(): continue
                 rec = json.loads(line)
-                if args.fault_filter == "latest" or rec.get("fault_type") == args.fault_filter:
+                if args.fault_filter == "latest" or rec.get("fault_type") == args.fault_filter or rec.get("fault_id") == args.fault_filter:
                     fault = rec
                     break
                     
@@ -58,18 +60,27 @@ def main():
                     recv_dt = parse_iso(payload["received_at"])
                     if start_dt <= recv_dt <= end_dt:
                         raw_body_str = payload.get("raw_body", "")
-                        body = json.loads(raw_body_str) if raw_body_str else {}
+                        raw_body = json.loads(raw_body_str) if raw_body_str else {}
                         path = payload.get("path", "")
                         
-                        if "zabbix" in path:
-                            alerts.append({
-                                "tool": "Zabbix",
-                                "name": body.get("name", "Unknown Zabbix Trigger"),
-                                "component": body.get("host", "Unknown Host"),
-                                "severity": body.get("severity", "Unknown"),
-                                "timestamp": payload["received_at"]
-                            })
+                        if "value" in raw_body and "trigger_name" in raw_body["value"]:
+                            # This handles Zabbix webhook wrapper
+                            try:
+                                inner = json.loads(raw_body["value"])
+                                ts = inner.get("event_time", payload["received_at"])
+                                if ts and "T" in ts:
+                                    ts = ts.replace(".", "-")
+                                alerts.append({
+                                    "tool": "Zabbix",
+                                    "name": inner.get("trigger_name", "Unknown Zabbix Trigger"),
+                                    "component": inner.get("host", "Unknown Host"),
+                                    "severity": inner.get("severity", "Unknown"),
+                                    "timestamp": ts
+                                })
+                            except json.JSONDecodeError:
+                                pass
                         elif "alertmanager" in path:
+                            body = raw_body
                             for al in body.get("alerts", []):
                                 labels = al.get("labels", {})
                                 alertname = labels.get("alertname", "Unknown")

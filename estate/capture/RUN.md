@@ -2,14 +2,17 @@
 
 This guide outlines exactly how to bring up the estate, start the capture sink, inject a fault, and extract the real payloads.
 
+## 0. Preflight Check
+Before running any faults, ensure the estate is fully functional.
+```bash
+python estate/capture/preflight.py
+```
+**Expected Output:** PASS for all checks. Fix any FAIL before proceeding.
+
 ## 1. Start the Sink
 In a new terminal window, start the capture sink. This must be running before the estate can forward any alerts.
 ```bash
 python estate/capture/sink.py
-```
-**Expected Output:**
-```
-Listening on port 8000 for captures...
 ```
 
 ## 2. Bring Up the Estate
@@ -23,54 +26,44 @@ sleep 15
 docker compose up -d
 ```
 
-## 3. Pre-flight Checks
-1. **Prometheus Targets:** Visit `http://localhost:9090/targets` and confirm all jobs (demo-frontend, node-exporter, cadvisor, blackbox, etc.) show `UP`.
-2. **Alertmanager Connection:** Visit `http://localhost:9090/status` and ensure Alertmanager is listed as an active target.
-3. **Zabbix Provisioning:**
+## 3. Zabbix Provisioning
 ```bash
 python estate/zabbix/provision.py
 ```
-**Expected Output:**
-```
-Provisioning Zabbix...
-[divergence_table] Zabbix Host / Items:
-Host: docker-host-01
-Items: CPU usage, Memory utilization, /valkey-data disk usage
-...
-```
 
-## 4. Trigger the Gate A Cascade
+## 4. Run All Faults
 ```bash
 cd estate/chaos
-./fill_disk.sh
+./run_all.sh
 ```
+*Note the quiet window start/end times printed at the beginning.*
 
-## 5. Observe the Sink
-Switch back to the terminal running `sink.py`. You should see incoming requests.
-- **Expected Lag:**
-  - **Prometheus/Alertmanager:** ~15-45 seconds. Prometheus scrapes every 15s, and Alertmanager has a 10s `group_wait` before firing the webhook.
-  - **Zabbix:** ~30-60 seconds, depending on the item polling interval configured in Zabbix.
-- **Wait Time:** Wait at least **3 minutes** after running the chaos script to conclude whether an alert has failed to arrive.
-
-## 6. Compare Payloads
-Once alerts have arrived, stop the sink (`Ctrl+C`) and run the comparison script:
+## 5. Measure and Report
+Once all faults have run, stop the sink (`Ctrl+C`) and generate the metrics:
 ```bash
-python estate/capture/compare.py disk_fill
+python estate/capture/measure.py --faults-file estate/captures/faults.jsonl --payloads-dir estate/captures/payloads --quiet-window <START> <END>
+python estate/capture/naming_table.py --faults-file estate/captures/faults.jsonl --payloads-dir estate/captures/payloads
 ```
-**Expected Output:** A markdown table displaying the alerts side-by-side, along with the counts to paste into `docs/ESTATE.md`.
+Fill out `docs/ESTATE.md` with the output.
 
-## Troubleshooting missing alerts
+## 6. Baseline Labeling
+Pick one fault ID from `faults.jsonl` and run:
+```bash
+python estate/capture/label.py --fault-id <fault_id> --faults-file estate/captures/faults.jsonl --payloads-dir estate/captures/payloads
+```
+Open the generated CSV in `estate/captures/labels/`, manually label the `same_incident` column (Y/N), and then run:
+```bash
+python estate/capture/label.py --summarise estate/captures/labels/<fault_id>.csv
+```
+Record the result in `docs/ESTATE.md`.
 
-* **Prometheus alerts missing:**
-  - Check `http://localhost:9090/rules` to see if the rule evaluated to true.
-  - Check `http://localhost:9090/alerts` to see if it is pending/firing.
-  - Check Alertmanager UI `http://localhost:9093` to see if it received the alert and if there are delivery errors to the webhook.
+## Detection Latency Budget (CartDown)
+The current `CartDown` rule relies on `absent(dotnet_exceptions_total)`. Its detection latency budget is:
+- **metric_expiration**: 90s
+- **for**: 60s
+- **scrape/eval jitter**: ~30s-90s
+**Total latency**: ~4m
+*Warning*: This is perilously close to the 5m fault window. Any fault shorter than ~4.5m risks a false negative, which will look like a tool failure when it's just slow detection.
 
-* **Zabbix alerts missing:**
-  - Check Zabbix Web UI `http://localhost:8082` -> Monitoring -> Problems.
-  - Ensure the item is actively polling the `/valkey-data` volume.
-  - Check Administration -> Media types -> Correlation Engine Webhook for any delivery errors.
-
-* **Blackbox alerts missing:**
-  - Check Prometheus `http://localhost:9090/targets` to ensure the blackbox probe is successful during steady state.
-  - The probe only fails when the frontend goes down, which requires the disk fill to successfully cascade to valkey -> cart -> checkout -> frontend.
+## Zabbix Baseline Note
+Zabbix is configured with exactly one trigger (`vfs.fs.size` on the `/mnt/valkey-data` volume) by design. It does not monitor container liveness, memory, or CPU for the estate's services. Therefore, it will report 0 alerts for faults like `kill_service` or `partition`. This is intentional: Zabbix is present as a minimal infrastructure baseline, reflecting a common real-world scenario where different tools cover different strata of the stack. Its zeros reflect its configuration scope, NOT a tool capability failure.
