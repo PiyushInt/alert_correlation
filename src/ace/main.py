@@ -4,8 +4,10 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from ace.api.components import router as components_router
 from ace.api.health import router as health_router
 from ace.api.webhooks.alertmanager import router as alertmanager_router
+from ace.api.webhooks.zabbix import router as zabbix_router
 from ace.bypass.canary import run_canary_loop
 from ace.config import settings
 
@@ -31,6 +33,8 @@ def create_app() -> FastAPI:
 
     app.include_router(health_router)
     app.include_router(alertmanager_router, prefix="/webhooks/alertmanager")
+    app.include_router(zabbix_router, prefix="/webhooks/zabbix")
+    app.include_router(components_router, prefix="/components")
 
     return app
 

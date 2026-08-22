@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
 from uuid import UUID
@@ -22,3 +23,9 @@ class NormalisedAlert(BaseModel):
     status: str = Field(..., description="Current status (e.g., firing, resolved)")
     environment: str = Field(default="production", description="Deployment environment")
     tenant: str = Field(default="default", description="Tenant ID")
+
+
+@dataclass
+class Candidate:
+    value: str
+    field_name: str

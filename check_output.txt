@@ -1,9 +1,9 @@
 Running ruff format check...
-44 files already formatted
+60 files already formatted
 Running ruff check...
 All checks passed!
 Running mypy...
-Success: no issues found in 39 source files
+Success: no issues found in 51 source files
 Running pytest...
 ============================= test session starts ==============================
 platform darwin -- Python 3.12.13, pytest-9.1.1, pluggy-1.6.0
@@ -11,9 +11,13 @@ rootdir: /Users/piyushkumar/Meslova/alert_correlation_engine
 configfile: pyproject.toml
 testpaths: tests
 plugins: anyio-4.14.2, hypothesis-6.165.10
-collected 11 items
+collected 26 items
 
-tests/db/test_schema.py ........                                         [ 72%]
+tests/bypass/test_bypass.py ....                                         [ 15%]
+tests/db/test_schema.py ........                                         [ 46%]
+tests/ingestion/test_alertmanager.py .......                             [ 73%]
+tests/ingestion/test_resolver.py .                                       [ 76%]
+tests/ingestion/test_zabbix.py ...                                       [ 88%]
 tests/test_health.py ...                                                 [100%]
 
 =============================== warnings summary ===============================
@@ -22,5 +26,5 @@ tests/test_health.py ...                                                 [100%]
     from starlette.testclient import TestClient as TestClient  # noqa
 
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
-======================== 11 passed, 1 warning in 0.65s =========================
+======================== 26 passed, 1 warning in 1.82s =========================
 All checks passed!
