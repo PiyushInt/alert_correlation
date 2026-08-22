@@ -1,0 +1,6 @@
+{
+  "received_at": "2024-01-01T00:00:30Z",
+  "path": "/webhooks/alertmanager",
+  "headers": {},
+  "raw_body": "{\"alerts\": [{\"labels\": {\"alertname\": \"HighDiskUsage\", \"instance\": \"node-exporter:9100\", \"severity\": \"critical\"}}]}"
+}

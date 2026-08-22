@@ -1,0 +1,157 @@
+version: "3.8"
+
+services:
+  # --- OpenTelemetry Demo Subset ---
+  frontend:
+    image: ghcr.io/open-telemetry/demo:latest-frontend
+    environment:
+      - PORT=8080
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    ports:
+      - "8080:8080"
+    depends_on:
+      - otel-collector
+      
+  checkout:
+    image: ghcr.io/open-telemetry/demo:latest-checkout
+    environment:
+      - PORT=8081
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+
+  cart:
+    image: ghcr.io/open-telemetry/demo:latest-cart
+    environment:
+      - VALKEY_ADDR=valkey:6379
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    depends_on:
+      - valkey
+
+  product-catalog:
+    image: ghcr.io/open-telemetry/demo:latest-productcatalog
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+
+  valkey:
+    image: valkey/valkey:latest
+    volumes:
+      - ./valkey-data:/data
+
+  load-generator:
+    image: ghcr.io/open-telemetry/demo:latest-loadgenerator
+    environment:
+      - FRONTEND_ADDR=frontend:8080
+    depends_on:
+      - frontend
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    volumes:
+      - ./otelcol/config.yaml:/etc/otelcol/config.yaml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+
+  # --- Monitoring Stack ---
+  prometheus:
+    image: prom/prometheus:latest
+    volumes:
+      - ./prometheus:/etc/prometheus
+    ports:
+      - "9090:9090"
+
+  alertmanager:
+    image: prom/alertmanager:latest
+    volumes:
+      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "9093:9093"
+
+  blackbox-exporter:
+    image: prom/blackbox-exporter:latest
+    volumes:
+      - ./blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml
+    ports:
+      - "9115:9115"
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - ./valkey-data:/valkey-data:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    ports:
+      - "8080:8080" # NOTE: port conflict with frontend, map to 8083 on host
+    expose:
+      - "8080"
+
+  zabbix-server:
+    image: zabbix/zabbix-server-pgsql:latest
+    environment:
+      - DB_SERVER_HOST=zabbix-db
+      - POSTGRES_USER=zabbix
+      - POSTGRES_PASSWORD=zabbix
+    depends_on:
+      - zabbix-db
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "10051:10051"
+
+  zabbix-web:
+    image: zabbix/zabbix-web-nginx-pgsql:latest
+    environment:
+      - DB_SERVER_HOST=zabbix-db
+      - POSTGRES_USER=zabbix
+      - POSTGRES_PASSWORD=zabbix
+      - ZBX_SERVER_HOST=zabbix-server
+    ports:
+      - "8082:8080"
+    depends_on:
+      - zabbix-server
+
+  zabbix-db:
+    image: postgres:16
+    environment:
+      - POSTGRES_USER=zabbix
+      - POSTGRES_PASSWORD=zabbix
+      - POSTGRES_DB=zabbix
+
+  zabbix-agent:
+    image: zabbix/zabbix-agent:latest
+    environment:
+      - ZBX_HOSTNAME=docker-host-01
+      - ZBX_SERVER_HOST=zabbix-server
+    volumes:
+      - ./valkey-data:/valkey-data:ro
+
+  # --- Chaos ---
+  pumba:
+    image: gaiaadm/pumba:latest
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    entrypoint: ["/bin/sh", "-c", "sleep infinity"]
+
+  toxiproxy:
+    image: shopify/toxiproxy:latest
+    ports:
+      - "8474:8474"

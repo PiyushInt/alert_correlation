@@ -1,0 +1,6 @@
+{
+  "received_at": "2024-01-01T00:00:50Z",
+  "path": "/webhooks/alertmanager",
+  "headers": {},
+  "raw_body": "{\"alerts\": [{\"labels\": {\"alertname\": \"BlackboxProbeFailed\", \"job\": \"blackbox\", \"instance\": \"http://frontend:8080\", \"severity\": \"critical\"}}]}"
+}

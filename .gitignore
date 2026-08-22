@@ -16,3 +16,7 @@ eval/captures/
 .DS_Store
 .idea/
 .vscode/
+estate/captures/traces/
+
+estate/captures/payloads/
+estate/captures/traces/

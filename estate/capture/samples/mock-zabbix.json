@@ -1,0 +1,6 @@
+{
+  "received_at": "2024-01-01T00:00:45Z",
+  "path": "/webhooks/zabbix",
+  "headers": {},
+  "raw_body": "{\"name\": \"High disk usage on /valkey-data\", \"host\": \"docker-host-01\", \"severity\": \"critical\"}"
+}
