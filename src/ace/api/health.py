@@ -2,7 +2,7 @@ from typing import Any
 
 import psycopg
 import redis
-from fastapi import APIRouter
+from fastapi import APIRouter, Response
 
 from ace.config import settings
 
@@ -15,7 +15,7 @@ def health() -> dict[str, str]:
 
 
 @router.get("/ready")
-def ready() -> dict[str, Any]:
+def ready(response: Response) -> dict[str, Any]:
     # Check Postgres
     postgres_status = "down"
     try:
@@ -35,8 +35,12 @@ def ready() -> dict[str, Any]:
     except Exception:
         pass
 
+    status_msg = "ready" if postgres_status == "up" and redis_status == "up" else "not_ready"
+    if status_msg == "not_ready":
+        response.status_code = 503
+
     return {
-        "status": "ready" if postgres_status == "up" and redis_status == "up" else "not_ready",
+        "status": status_msg,
         "dependencies": {"postgres": postgres_status, "redis": redis_status},
         "pipeline_lag_seconds": None,
         "bypass_active": False,
