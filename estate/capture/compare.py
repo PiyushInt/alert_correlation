@@ -11,6 +11,26 @@ def parse_iso(dt_str):
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
+
+import yaml
+
+def get_rule_components():
+    try:
+        with open(os.path.join(REPO_ROOT, "estate", "prometheus", "rules.yml")) as f:
+            data = yaml.safe_load(f)
+            mapping = {}
+            for group in data.get("groups", []):
+                for rule in group.get("rules", []):
+                    alert = rule.get("alert")
+                    comp = rule.get("labels", {}).get("component")
+                    if alert and comp:
+                        mapping[alert] = comp
+            return mapping
+    except:
+        return {}
+
+RULE_COMPONENTS = get_rule_components()
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("fault_filter", help="<fault_type|latest>")
@@ -91,7 +111,7 @@ def main():
                                 else:
                                     tool = "Prometheus"
                                     
-                                component = labels.get("instance") or labels.get("pod") or labels.get("host") or "Unknown"
+                                component = labels.get("component") or RULE_COMPONENTS.get(alertname) or labels.get("instance") or labels.get("pod") or labels.get("host") or "Unknown"
                                 severity = labels.get("severity", "Unknown")
                                 
                                 alerts.append({

@@ -37,13 +37,7 @@ python estate/capture/naming_table.py --faults-file estate/captures/faults.jsonl
 ```
 
 ## Baseline Relatedness
-Total related pairs labeled: 28
-Pairs sharing a component: 0
-Pairs sharing similar text: 15
-Pairs sharing NEITHER (dependency map territory): 13
-```bash
-python estate/capture/label.py --summarise estate/captures/labels/kill_service.csv
-```
+Baseline relatedness (kill_service, 8 alerts, 28 pairs): 6 CartDown firings are duplicates handled by Stage 2. Beyond deduplication, the fault produced 3 distinct alerts. The frontend probe failure (`http://frontend:8080/api/cart`) shares neither component nor text with the cart alerts — no signal except dependency proximity can group them. Single observation, one fault type.
 
 ## Detection Lag Budget
 * **Otel-Collector Expiration**: `metric_expiration: 60s`

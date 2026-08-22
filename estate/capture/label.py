@@ -14,6 +14,26 @@ def tokenize(text):
 
 REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
 
+
+import yaml
+
+def get_rule_components():
+    try:
+        with open(os.path.join(REPO_ROOT, "estate", "prometheus", "rules.yml")) as f:
+            data = yaml.safe_load(f)
+            mapping = {}
+            for group in data.get("groups", []):
+                for rule in group.get("rules", []):
+                    alert = rule.get("alert")
+                    comp = rule.get("labels", {}).get("component")
+                    if alert and comp:
+                        mapping[alert] = comp
+            return mapping
+    except:
+        return {}
+
+RULE_COMPONENTS = get_rule_components()
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--fault-id", help="Fault target or ID")
@@ -105,7 +125,7 @@ def main():
                                 name = labels.get("alertname", "")
                                 job = labels.get("job", "")
                                 prefix = "B" if job == "blackbox" or "probe" in name.lower() else "P"
-                                comp = labels.get("instance") or labels.get("pod") or labels.get("host") or ""
+                                comp = labels.get("component") or RULE_COMPONENTS.get(name) or labels.get("instance") or labels.get("pod") or labels.get("host") or ""
                                 alerts.append({
                                     "id": f"{prefix}_{len(alerts)}",
                                     "name": name,
