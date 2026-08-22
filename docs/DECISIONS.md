@@ -33,3 +33,31 @@
 **Decision:** Resolution iterates over extracted identifier candidates (ordered from most-specific to least-specific). Pass 1: first exact or alias match wins. Pass 2: first fuzzy match wins. A fuzzy match NEVER beats an exact/alias match from a lower-precedence candidate.
 **Alternatives Rejected:** Allowing fuzzy matches to preempt exact matches from lower-priority candidates.
 **Reason:** Explicit matches (exact/manual aliases) are high-confidence signals and must override fuzzy (string-similarity) matches, which are error-prone and used only as a last resort.
+
+### 2026-08-22 - Pipeline Order (Phase 5)
+**Decision:** Damping runs BEFORE Deduplication.
+**Alternatives Rejected:** Dedup before damping.
+**Reason:** If dedup runs first, it collapses rapid `firing` -> `resolved` -> `firing` transitions into a single deduped entry before damping can count the flips. Damping must see every state transition.
+
+### 2026-08-22 - Flap Counting (Phase 5)
+**Decision:** Use a sliding window via Redis Sorted Sets (`ZADD` with timestamp, `ZREMRANGEBYSCORE`, `ZCARD`) to count flips within `FLAP_WINDOW`.
+**Alternatives Rejected:** A running total that only resets after a quiet period.
+**Reason:** A running total would accumulate unrelated flips over hours (e.g., 4 flips, hour silence, 2 flips = 6 flips) and incorrectly trigger thresholds.
+
+### 2026-08-22 - Stream Cap (Phase 5)
+**Decision:** `alerts.raw` and `alerts.clean` capped at ~10,000 entries using `XADD ... MAXLEN ~`.
+**Alternatives Rejected:** Uncapped streams or very tight caps.
+**Reason:** At a peak burst of 1 alert/minute (1,440/day), 10,000 entries retains ~7 days of events. This is generous for the demo estate and ensures memory safety, while allowing plenty of time since nothing consumes `alerts.clean` until Phase 7.
+
+### 2026-08-22 - Resolved Alerts in Deduplication (Phase 5)
+**Decision:** Dedup keys on `{fingerprint}` (excluding status). A resolved alert triggers a dedup hit for its original firing alert, updating the original's status to `resolved` and setting its `ends_at`. The dedup key is then deleted to avoid the re-fire bug. The incoming resolved alert is forwarded to `alerts.clean` and linked via `resolves_alert_id`.
+**Alternatives Rejected:** Keying on `{fingerprint}:{status}`.
+**Reason:** Separating keys leaves the original firing row "open" in the database indefinitely. By mapping `resolved` to the original `firing` dedup key, we properly close the canonical event. Deleting the key immediately after allows subsequent new occurrences of the same alert to correctly open a new row.
+
+### 2026-08-22 - Immutable Ledger and Counting Definitions (Phase 5)
+**Decision:** The `alerts` table acts as an immutable ledger of every payload received. Deduplication controls downstream flow (to `alerts.clean`) and updates aggregate state (`occurrence_count`, `last_seen_at`) on the first-seen row, but it DOES NOT delete duplicate rows from the database.
+**Alternatives Rejected:** Deleting duplicate rows to save database storage space.
+**Reason:** Deleting duplicates destroys the raw event history necessary for Phase 12's replay harness and corrupts baseline metrics which rely on the total number of received alerts. 
+**Counting Definitions:**
+- **RECEIVED alerts:** `count(*)` from `alerts`. This is the denominator for Phase 0 baselines (e.g., 35% unresolved rate, 47.5% duplicate rate).
+- **DISTINCT alerts:** `count(DISTINCT fingerprint)`, which is equivalent to the number of rows forwarded to `alerts.clean`.

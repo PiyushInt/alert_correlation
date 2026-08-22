@@ -2,12 +2,26 @@
 
 An intelligent engine that normalizes, deduplicates, and correlates alerts from disparate monitoring tools to reduce alert noise and identify root causes.
 
-## Getting Started
+## Development Setup
 
-1. Clone the repository.
-2. Ensure you have Python 3.12 installed.
-3. Set up the virtual environment: `python3.12 -m venv .venv && source .venv/bin/activate`
-4. Install dependencies: `pip install -e ".[dev]"`
-5. Start local infrastructure: `docker compose -f docker-compose.services.yml up -d`
-   *(Note: Postgres is mapped to 5433 and Redis to 6380 to avoid clashing with native local instances)*
-6. Run the application: `./scripts/dev.sh`
+1. **Start Infrastructure (PostgreSQL 16 & Redis 7.2)**
+   ```bash
+   ./scripts/dev.sh
+   ```
+
+2. **Start the API Server**
+   ```bash
+   source .venv/bin/activate
+   uvicorn ace.api.main:app --reload --port 8000
+   ```
+
+3. **Start the Ingest Worker**
+   *(In a second terminal)*
+   ```bash
+   ./scripts/worker.sh
+   ```
+
+4. **Tests & Checks**
+   ```bash
+   ./scripts/check.sh
+   ```

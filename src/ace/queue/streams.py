@@ -14,13 +14,18 @@ def get_redis_client() -> redis.Redis:
 
 def publish_to_stream(alert_id: uuid.UUID, stream_name: str = "alerts.raw") -> bool:
     """
-    Publish an alert ID to the specified Redis Stream.
+    Publish an alert ID to the specified Redis Stream with MAXLEN capping.
     Returns True on success, False if Redis is unavailable.
     """
     try:
         client = get_redis_client()
         # Redis streams require dict[str, str|bytes]
-        client.xadd(stream_name, {"alert_id": str(alert_id)})
+        client.xadd(
+            stream_name,
+            {"alert_id": str(alert_id)},
+            maxlen=settings.STREAM_MAXLEN,
+            approximate=True,
+        )
         return True
     except redis.RedisError as e:
         logger.warning(f"Failed to publish alert {alert_id} to stream {stream_name}: {e}")
