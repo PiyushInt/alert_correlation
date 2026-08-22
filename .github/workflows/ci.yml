@@ -18,7 +18,7 @@ jobs:
           POSTGRES_PASSWORD: ace_password
           POSTGRES_DB: ace_db
         ports:
-          - 5432:5432
+          - 5433:5432
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
@@ -28,7 +28,7 @@ jobs:
       redis:
         image: redis:7
         ports:
-          - 6379:6379
+          - 6380:6379
         options: >-
           --health-cmd "redis-cli ping"
           --health-interval 10s
