@@ -37,9 +37,12 @@ python estate/capture/naming_table.py --faults-file estate/captures/faults.jsonl
 ```
 
 ## Baseline Relatedness
-TODO
+Total related pairs labeled: 28
+Pairs sharing a component: 0
+Pairs sharing similar text: 15
+Pairs sharing NEITHER (dependency map territory): 13
 ```bash
-python estate/capture/label.py --summarise estate/captures/labels/<fault_id>.csv
+python estate/capture/label.py --summarise estate/captures/labels/kill_service.csv
 ```
 
 ## Detection Lag Budget
