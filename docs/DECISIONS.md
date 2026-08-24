@@ -80,3 +80,17 @@ The core of the project was described as being "built from observed traffic", bu
 ### Standing Rule - No Silent Failures (Phase 6 onwards)
 **Decision:** Components whose output nothing downstream validates must fail LOUDLY.
 **Reason:** Phase 6's extractor dropped resolution misses silently and swallowed DB insert errors (a missing first_seen), so a completely non-functional dependency map was indistinguishable from a working one until an edge count was requested. Every drop, skip, or swallowed error must be logged at WARNING and counted in a metric.
+
+Furthermore, instrumentation that is never exposed is the same class of defect as an error that is never logged. Counters and metrics MUST be observable (e.g. via an exposed `/metrics` endpoint) the moment they are introduced.
+
+### 2026-08-24 - Correlation Centroid Definition (Phase 7)
+**Decision:** The "centroid" for the `same_component` signal is defined as the *set of unique component IDs* from all alerts currently in the incident. An alert scores 1.0 if its component ID is in this set.
+**Reason:** The "CENTROID, NOT ANY-MEMBER" containment rule requires that an alert scores against the incident *as a whole*. This definition generalizes well: for future signals (e.g., proximity), distance must be measured from the incident's entire component set, rather than by walking pairwise edges from single members (which reintroduces transitivity).
+
+### 2026-08-24 - No Transitive Closure Rule (Phase 7)
+**Decision:** Grouping is NEVER connected-components over a pairwise similarity graph. Transitivity is structurally prevented (Option A) by the `IncidentCentroid` abstraction. The engine passes an `IncidentCentroid` to signals, not the member alert list.
+**Reason:** If a signal is physically deprived of the member alert list, it cannot iterate members to compute `max(pairwise)`. This enforcement mechanism makes it structurally impossible to write a transitivity bug in Phase 8 (Proximity) or Phase 9 (TextSimilarity), as the signal author is forced to evaluate against the centroid representation.
+
+### 2026-08-24 - NULL Component IDs (Phase 7)
+**Decision:** Alerts with `component_id=None` score 0.0 for `same_component` matches against other `NULL` components.
+**Reason:** `NULL != NULL`. Two unresolved alerts from different unknown components are not the same component. They will open separate incidents unless grouped by another signal (like text similarity).
