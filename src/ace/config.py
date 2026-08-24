@@ -55,6 +55,9 @@ class Settings(BaseSettings):
     CONSUMER_GROUP: str = Field(
         default="ace-pipeline", description="Redis stream consumer group name"
     )
+    CORRELATION_GROUP: str = Field(
+        default="ace-correlation", description="Redis stream consumer group name for correlation"
+    )
     CONSUMER_BATCH_SIZE: int = Field(default=10, description="Max messages per batch")
     CONSUMER_BLOCK_MS: int = Field(
         default=2000, description="Milliseconds to block for new messages"

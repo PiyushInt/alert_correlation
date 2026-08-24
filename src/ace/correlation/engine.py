@@ -1,0 +1,105 @@
+import datetime
+import logging
+import uuid
+
+import redis
+from sqlalchemy.orm import Session
+
+from ace.config import settings
+from ace.correlation.decision import make_decision
+from ace.correlation.lifecycle import accrete_alert, auto_resolve_if_ready, open_incident
+from ace.correlation.signals.base import SignalContext
+from ace.correlation.signals.registry import get_active_signals
+from ace.correlation.window import add_open_incident, get_open_incidents, remove_open_incident
+from ace.db.models.alerts import Alert
+from ace.db.models.incidents import Incident, IncidentAlert
+from ace.dependency.graph import graph_instance
+from ace.metrics import registry
+
+logger = logging.getLogger(__name__)
+
+
+def process_alert_correlation(db: Session, r: redis.Redis, alert: Alert) -> None:
+    """
+    Main entry point for Pipeline Stage 4: Correlation Engine.
+    Orchestrates candidate gathering, decision making, and lifecycle execution.
+    """
+    if alert.incident_id:
+        # Already correlated (maybe re-queued)
+        return
+
+    # Critical severity bypass: notify immediately and ALSO correlate
+    is_critical_bypass = alert.severity.lower() == settings.CRITICAL_BYPASS_SEVERITY.lower()
+    if is_critical_bypass:
+        logger.info(f"Alert {alert.id} is CRITICAL. Triggering immediate notification bypass.")
+        # In a real system, we'd trigger the notification webhook here immediately.
+
+    # 1. Fetch Candidate Incidents from Window
+    open_incident_ids = get_open_incidents(r)
+
+    candidate_incidents: list[tuple[Incident, list[Alert]]] = []
+    expired_incidents: list[uuid.UUID] = []
+
+    for inc_id in open_incident_ids:
+        incident = db.query(Incident).filter(Incident.id == inc_id).first()
+        if not incident:
+            remove_open_incident(r, inc_id)
+            continue
+
+        # Get all members
+        member_links = db.query(IncidentAlert).filter(IncidentAlert.incident_id == inc_id).all()
+        member_ids = [link.alert_id for link in member_links]
+        members = db.query(Alert).filter(Alert.id.in_(member_ids)).all()
+
+        # Check if window expired for this incident relative to the alert's starts_at
+        # Assuming the incident window starts at incident.opened_at
+        age = (alert.starts_at - incident.opened_at).total_seconds()
+
+        if age > settings.CORRELATION_WINDOW:
+            expired_incidents.append(inc_id)
+            auto_resolve_if_ready(db, incident, members, window_expired=True)
+            db.commit()
+            continue
+
+        # Also auto-resolve if all members are resolved
+        if auto_resolve_if_ready(db, incident, members, window_expired=False):
+            expired_incidents.append(inc_id)
+            db.commit()
+            continue
+
+        candidate_incidents.append((incident, members))
+
+    for inc_id in expired_incidents:
+        remove_open_incident(r, inc_id)
+
+    # 2. Make Decision (PURE)
+    context = SignalContext(db_session=db, redis_client=r, graph=graph_instance)
+    signals = get_active_signals()
+
+    decision = make_decision(alert, candidate_incidents, signals, context)
+
+    # 3. Execute Decision
+    if decision.incident:
+        logger.info(
+            f"Alert {alert.id} joined Incident {decision.incident.id}. Reason: {decision.reason}"
+        )
+
+        # Find the members list for the chosen incident
+        members = next(m for i, m in candidate_incidents if i.id == decision.incident.id)
+
+        accrete_alert(db, alert, decision.incident, members, decision.score, decision.reason)
+        # Update window
+        add_open_incident(r, decision.incident.id)
+
+    else:
+        logger.info(f"Alert {alert.id} opened a new Incident. Reason: {decision.reason}")
+        incident = open_incident(db, alert)
+        add_open_incident(r, incident.id)
+
+        # Track Added-Latency for a NEW incident: Receipt to first notification.
+        # This is (now - alert.received_at)
+        now = datetime.datetime.now(datetime.UTC)
+        latency = (now - alert.received_at).total_seconds()
+        registry.observe_histogram("ace_incident_notification_latency_seconds", latency)
+
+    db.commit()

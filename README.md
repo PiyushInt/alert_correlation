@@ -9,16 +9,14 @@ An intelligent engine that normalizes, deduplicates, and correlates alerts from 
    ./scripts/dev.sh
    ```
 
-2. **Start the API Server**
-   ```bash
-   source .venv/bin/activate
-   uvicorn ace.api.main:app --reload --port 8000
-   ```
-
-3. **Start the Ingest Worker**
-   *(In a second terminal)*
+2. **Start the Ingest Worker**:
    ```bash
    ./scripts/worker.sh
+   ```
+
+3. **Start the Correlation Worker**:
+   ```bash
+   ./scripts/correlation_worker.sh
    ```
 
 4. **Tests & Checks**

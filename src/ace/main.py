@@ -7,6 +7,8 @@ from fastapi import FastAPI
 from ace.api.components import router as components_router
 from ace.api.dependency_map import router as dependency_map_router
 from ace.api.health import router as health_router
+from ace.api.incidents import router as incidents_router
+from ace.api.metrics import router as metrics_router
 from ace.api.webhooks.alertmanager import router as alertmanager_router
 from ace.api.webhooks.zabbix import router as zabbix_router
 from ace.bypass.canary import run_canary_loop
@@ -51,8 +53,10 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(alertmanager_router, prefix="/webhooks/alertmanager")
     app.include_router(zabbix_router, prefix="/webhooks/zabbix")
-    app.include_router(components_router, prefix="/components")
-    app.include_router(dependency_map_router, prefix="/dependencies")
+    app.include_router(components_router, prefix="/components", tags=["components"])
+    app.include_router(dependency_map_router, prefix="/dependencies", tags=["dependencies"])
+    app.include_router(incidents_router, prefix="/incidents", tags=["incidents"])
+    app.include_router(metrics_router, tags=["metrics"])
     app.include_router(otlp_router)  # mounted at /v1/traces natively
 
     return app
