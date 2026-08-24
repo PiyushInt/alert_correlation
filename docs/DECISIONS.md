@@ -61,3 +61,22 @@
 **Counting Definitions:**
 - **RECEIVED alerts:** `count(*)` from `alerts`. This is the denominator for Phase 0 baselines (e.g., 35% unresolved rate, 47.5% duplicate rate).
 - **DISTINCT alerts:** `count(DISTINCT fingerprint)`, which is equivalent to the number of rows forwarded to `alerts.clean`.
+
+### 2026-08-24 - Dependency Map Edges (Phase 6)
+**Decision:** Datastore edges, host/volume edges, and unobservable service edges are seeded from the inventory `topology.yaml` rather than extracted from traces. 
+**Alternatives Rejected:** Relying purely on observed trace traffic for the dependency map.
+**Reason:** The OpenTelemetry demo estate has severe limitations in emitting client spans:
+- The OTel Demo's frontend does not emit client spans for its backend calls in this configuration, so service-to-service edges below the entry point are invisible to trace extraction.
+- Datastore calls from cart emit no spans at all.
+- Trace extraction therefore observed only the edges it could: `load-generator -> frontend`.
+- Everything on the headline chain is inventory-seeded.
+
+The core of the project was described as being "built from observed traffic", but on this estate, all 4 edges on the headline critical path are hand-seeded:
+- `frontend -> cart`: inventory (seeded)
+- `cart -> valkey`: inventory (seeded)
+- `valkey -> docker-host-01`: inventory (seeded)
+- `docker-host-01 -> /mnt/valkey-data`: inventory (seeded)
+
+### Standing Rule - No Silent Failures (Phase 6 onwards)
+**Decision:** Components whose output nothing downstream validates must fail LOUDLY.
+**Reason:** Phase 6's extractor dropped resolution misses silently and swallowed DB insert errors (a missing first_seen), so a completely non-functional dependency map was indistinguishable from a working one until an edge count was requested. Every drop, skip, or swallowed error must be logged at WARNING and counted in a metric.

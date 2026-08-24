@@ -5,7 +5,7 @@ import uuid
 
 import redis
 
-from ace.api.dependencies import SessionLocal
+from ace.api.deps import SessionLocal
 from ace.config import settings
 from ace.db.models.alerts import Alert
 from ace.ingestion.models import NormalisedAlert

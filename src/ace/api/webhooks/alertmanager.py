@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
-from ace.api.dependencies import get_db
+from ace.api.deps import get_db
 from ace.bypass.health import evaluate_state
 from ace.bypass.router import route_alert
 from ace.db.models.alerts import Alert

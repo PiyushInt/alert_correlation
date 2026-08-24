@@ -4,7 +4,7 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from ace.api.dependencies import get_db
+from ace.api.deps import get_db
 from ace.db.models.components import Component, ComponentAlias
 
 router = APIRouter()

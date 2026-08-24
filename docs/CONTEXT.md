@@ -20,3 +20,18 @@ Due to memory constraints and service breakage, the following adjustments define
 - **Detection Lag**: There is a ~2 minute detection lag built into the estate due to `metric_expiration: 60s` in the OpenTelemetry collector plus `for: 1m` in Prometheus rules.
 - **Scope**: Exactly 4 fault types are measured against one single topology, using one labeller.
 - **Baseline Unresolved Components**: The estate currently has **35% unresolved component identifiers** at baseline. This is the official starting point that Phase 4's resolver must improve upon to hit the `<5%` target.
+
+**Dependency Map Limitations (Phase 6)**
+The core of the project was described as being "built from observed traffic" via OTLP traces. However, the OpenTelemetry demo estate has severe limitations in emitting client spans:
+- The OTel Demo's frontend does not emit client spans for its backend calls in this configuration, so service-to-service edges below the entry point are invisible to trace extraction.
+- Datastore calls from cart emit no spans at all.
+- Trace extraction therefore observed only the edges it could: `load-generator -> frontend`.
+- Everything on the headline chain is inventory-seeded.
+
+The headline chain is composed as follows:
+- `frontend -> cart`: inventory (seeded)
+- `cart -> valkey`: inventory (seeded)
+- `valkey -> docker-host-01`: inventory (seeded)
+- `docker-host-01 -> /mnt/valkey-data`: inventory (seeded)
+
+0 of 4 edges on the critical path are observed from traces. This represents a significant limitation of trace-derived maps in this estate.

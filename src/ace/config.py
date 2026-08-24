@@ -63,6 +63,14 @@ class Settings(BaseSettings):
         default=30000, description="Milliseconds before reclaiming pending entries"
     )
 
+    # Phase 6: Dependency Map
+    EDGE_CONFIDENCE_BOOST: float = 0.1
+    EDGE_CONFIDENCE_DECAY: float = 0.05
+    EDGE_CONFIDENCE_MIN: float = 0.1
+    EDGE_CONFIDENCE_MAX: float = 1.0
+    GRAPH_REFRESH_INTERVAL: int = 60
+    INVENTORY_TOPOLOGY_PATH: str = "estate/inventory/topology.yaml"
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 

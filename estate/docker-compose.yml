@@ -5,6 +5,7 @@ services:
     environment:
       - PORT=8080
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=frontend
     ports:
       - "8080:8080"
     depends_on:
@@ -15,6 +16,7 @@ services:
     environment:
       - CHECKOUT_PORT=8081
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=checkout
       - CART_ADDR=cart:8080
       - CURRENCY_ADDR=currency:8080
       - PRODUCT_CATALOG_ADDR=product-catalog:8080
@@ -37,6 +39,7 @@ services:
     image: ghcr.io/open-telemetry/demo:latest-product-catalog
     environment:
       - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=product-catalog
 
   valkey:
     image: valkey/valkey:latest

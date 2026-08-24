@@ -1,0 +1,13 @@
+edges:
+  - from: frontend
+    to: cart
+    relationship: calls
+  - from: cart
+    to: valkey
+    relationship: calls
+  - from: valkey
+    to: docker-host-01
+    relationship: runs_on
+  - from: docker-host-01
+    to: /mnt/valkey-data
+    relationship: has_volume

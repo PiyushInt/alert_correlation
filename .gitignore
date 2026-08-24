@@ -20,3 +20,6 @@ estate/captures/traces/
 
 estate/captures/payloads/
 estate/captures/traces/
+scratch/
+*.log
+*.pid

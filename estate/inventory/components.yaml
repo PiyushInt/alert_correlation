@@ -9,6 +9,8 @@ components:
         source_tool: prometheus
       - alias: docker-host-01
         source_tool: zabbix
+      - alias: docker-host-01
+        source_tool: trace
 
   - canonical_name: cart
     type: service
@@ -20,6 +22,8 @@ components:
         source_tool: prometheus
       - alias: cart:8080
         source_tool: blackbox
+      - alias: cart
+        source_tool: trace
         
   - canonical_name: /mnt/valkey-data
     type: filesystem
@@ -31,3 +35,32 @@ components:
         source_tool: prometheus
       - alias: /mnt/valkey-data
         source_tool: zabbix
+      - alias: /mnt/valkey-data
+        source_tool: trace
+
+  - canonical_name: frontend
+    type: service
+    environment: production
+    tenant: default
+    service_tier: tier-1
+    aliases:
+      - alias: frontend
+        source_tool: trace
+
+  - canonical_name: valkey
+    type: datastore
+    environment: production
+    tenant: default
+    service_tier: tier-1
+    aliases:
+      - alias: valkey
+        source_tool: trace
+
+  - canonical_name: load-generator
+    type: service
+    environment: production
+    tenant: default
+    service_tier: tier-1
+    aliases:
+      - alias: load-generator
+        source_tool: trace

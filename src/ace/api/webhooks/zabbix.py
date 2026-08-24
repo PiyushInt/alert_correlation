@@ -4,7 +4,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request, Response
 from sqlalchemy.orm import Session
 
-from ace.api.dependencies import get_db
+from ace.api.deps import get_db
 from ace.ingestion.adapters.zabbix import ZabbixAdapter
 
 router = APIRouter()

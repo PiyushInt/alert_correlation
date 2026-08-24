@@ -7,7 +7,7 @@ import yaml
 # Add src to pythonpath so we can import ace
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from ace.api.dependencies import SessionLocal
+from ace.api.deps import SessionLocal
 from ace.db.models.components import Component, ComponentAlias
 
 

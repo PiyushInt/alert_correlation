@@ -6,7 +6,7 @@ from unittest.mock import patch
 from fastapi.testclient import TestClient
 from sqlalchemy.orm import Session
 
-from ace.api.dependencies import get_db
+from ace.api.deps import get_db
 from ace.db.models.alerts import Alert
 from ace.db.models.components import Component, ComponentAlias
 from ace.main import app
