@@ -17,6 +17,7 @@ src/ace/api/deps.py
 src/ace/api/feedback.py
 src/ace/api/health.py
 src/ace/api/incidents.py
+src/ace/api/metrics.py
 src/ace/api/root_cause.py
 src/ace/api/webhooks/__init__.py
 src/ace/api/webhooks/alertmanager.py

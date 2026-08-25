@@ -1,163 +1,214 @@
 services:
-  # --- OpenTelemetry Demo Subset ---
   frontend:
     image: ghcr.io/open-telemetry/demo:latest-frontend
     environment:
-      - PORT=8080
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - OTEL_SERVICE_NAME=frontend
+    - PORT=8080
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_SERVICE_NAME=frontend
     ports:
-      - "8080:8080"
+    - 8080:8080
     depends_on:
-      - otel-collector
-      
+    - otel-collector
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   checkout:
     image: ghcr.io/open-telemetry/demo:latest-checkout
     environment:
-      - CHECKOUT_PORT=8081
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - OTEL_SERVICE_NAME=checkout
-      - CART_ADDR=cart:8080
-      - CURRENCY_ADDR=currency:8080
-      - PRODUCT_CATALOG_ADDR=product-catalog:8080
-      - EMAIL_ADDR=email:8080
-      - PAYMENT_ADDR=payment:8080
-      - SHIPPING_ADDR=shipping:8080
+    - CHECKOUT_PORT=8081
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_SERVICE_NAME=checkout
+    - CART_ADDR=cart:8080
+    - CURRENCY_ADDR=currency:8080
+    - PRODUCT_CATALOG_ADDR=product-catalog:8080
+    - EMAIL_ADDR=email:8080
+    - PAYMENT_ADDR=payment:8080
+    - SHIPPING_ADDR=shipping:8080
     depends_on:
-      - cart
-      - product-catalog
-
+    - cart
+    - product-catalog
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   cart:
     image: ghcr.io/open-telemetry/demo:latest-cart
     environment:
-      - VALKEY_ADDR=valkey:6379
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - VALKEY_ADDR=valkey:6379
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
     depends_on:
-      - valkey
-
+    - valkey
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   product-catalog:
     image: ghcr.io/open-telemetry/demo:latest-product-catalog
     environment:
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - OTEL_SERVICE_NAME=product-catalog
-
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_SERVICE_NAME=product-catalog
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   valkey:
     image: valkey/valkey:latest
     volumes:
-      - /mnt/valkey-data:/data
-
+    - /mnt/valkey-data:/data
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   load-generator:
     image: ghcr.io/open-telemetry/demo:latest-loadgenerator
     environment:
-      - FRONTEND_ADDR=frontend:8080
-      - LOCUST_HOST=http://frontend:8080
-      - LOCUST_HEADLESS=true
-      - LOCUST_AUTOSTART=true
-      - LOCUST_USERS=5
-      - LOCUST_SPAWN_RATE=1
-      - LOCUST_PLAYWRIGHT=0
-      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
-      - OTEL_SERVICE_NAME=load-generator
+    - FRONTEND_ADDR=frontend:8080
+    - LOCUST_HOST=http://frontend:8080
+    - LOCUST_HEADLESS=true
+    - LOCUST_AUTOSTART=true
+    - LOCUST_USERS=5
+    - LOCUST_SPAWN_RATE=1
+    - LOCUST_PLAYWRIGHT=0
+    - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+    - OTEL_SERVICE_NAME=load-generator
     depends_on:
-      - frontend
-
+    - frontend
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     ports:
-      - "8889:8889"
-      - "4317:4317"
-      - "4318:4318"
+    - 8889:8889
+    - 4317:4317
+    - 4318:4318
     volumes:
-      - ./otelcol/config.yaml:/etc/otelcol-contrib/config.yaml
+    - ./otelcol/config.yaml:/etc/otelcol-contrib/config.yaml
     extra_hosts:
-      - "host.docker.internal:host-gateway"
-
-  # --- Monitoring Stack ---
+    - host.docker.internal:host-gateway
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   prometheus:
     image: prom/prometheus:latest
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.retention.time=24h'
+    - --config.file=/etc/prometheus/prometheus.yml
+    - --storage.tsdb.retention.time=24h
     volumes:
-      - ./prometheus:/etc/prometheus
+    - ./prometheus:/etc/prometheus
     ports:
-      - "9090:9090"
-
+    - 9090:9090
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   alertmanager:
     image: prom/alertmanager:latest
     volumes:
-      - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+    - ./alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+    - host.docker.internal:host-gateway
     ports:
-      - "9093:9093"
-
+    - 9093:9093
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   blackbox-exporter:
     image: prom/blackbox-exporter:latest
     volumes:
-      - ./blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml
+    - ./blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml
     ports:
-      - "9115:9115"
-
+    - 9115:9115
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   node-exporter:
     image: prom/node-exporter:latest
     volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-      - /mnt/valkey-data:/mnt/valkey-data:ro
+    - /proc:/host/proc:ro
+    - /sys:/host/sys:ro
+    - /:/rootfs:ro
+    - /mnt/valkey-data:/mnt/valkey-data:ro
     command:
-      - '--path.procfs=/host/proc'
-      - '--path.rootfs=/rootfs'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    - --path.procfs=/host/proc
+    - --path.rootfs=/rootfs
+    - --path.sysfs=/host/sys
+    - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
     ports:
-      - "9100:9100"
-
+    - 9100:9100
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   zabbix-server:
     image: zabbix/zabbix-server-pgsql:latest
     environment:
-      - DB_SERVER_HOST=zabbix-db
-      - POSTGRES_USER=zabbix
-      - POSTGRES_PASSWORD=zabbix
+    - DB_SERVER_HOST=zabbix-db
+    - POSTGRES_USER=zabbix
+    - POSTGRES_PASSWORD=zabbix
     depends_on:
-      - zabbix-db
+    - zabbix-db
     extra_hosts:
-      - "host.docker.internal:host-gateway"
+    - host.docker.internal:host-gateway
     ports:
-      - "10051:10051"
-
+    - 10051:10051
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   zabbix-db:
     image: postgres:16
     environment:
-      - POSTGRES_USER=zabbix
-      - POSTGRES_PASSWORD=zabbix
-      - POSTGRES_DB=zabbix
-
+    - POSTGRES_USER=zabbix
+    - POSTGRES_PASSWORD=zabbix
+    - POSTGRES_DB=zabbix
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   zabbix-web:
     image: zabbix/zabbix-web-nginx-pgsql:latest
     depends_on:
-      - zabbix-server
+    - zabbix-server
     environment:
-      - DB_SERVER_HOST=zabbix-db
-      - POSTGRES_USER=zabbix
-      - POSTGRES_PASSWORD=zabbix
-      - ZBX_SERVER_HOST=zabbix-server
+    - DB_SERVER_HOST=zabbix-db
+    - POSTGRES_USER=zabbix
+    - POSTGRES_PASSWORD=zabbix
+    - ZBX_SERVER_HOST=zabbix-server
     ports:
-      - "8082:8080"
-
+    - 8082:8080
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
   zabbix-agent:
     image: zabbix/zabbix-agent:latest
     environment:
-      - ZBX_HOSTNAME=docker-host-01
-      - ZBX_SERVER_HOST=zabbix-server
+    - ZBX_HOSTNAME=docker-host-01
+    - ZBX_SERVER_HOST=zabbix-server
     volumes:
-      - /mnt/valkey-data:/mnt/valkey-data:ro
-
-  # --- Chaos ---
-#   pumba:
-#     image: gaiaadm/pumba:0.9.0
-#     volumes:
-#       - /var/run/docker.sock:/var/run/docker.sock
-#     entrypoint: ["/bin/sh", "-c", "sleep infinity"]
-# 
+    - /mnt/valkey-data:/mnt/valkey-data:ro
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'

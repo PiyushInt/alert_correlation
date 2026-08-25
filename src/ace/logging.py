@@ -4,6 +4,8 @@ import os
 import sys
 from datetime import datetime
 from typing import Any
+from logging.handlers import RotatingFileHandler
+from ace.config import settings
 
 
 class JSONFormatter(logging.Formatter):
@@ -39,7 +41,11 @@ def setup_logging() -> None:
     logger.addHandler(stdout_handler)
 
     # File handler
-    file_handler = logging.FileHandler("logs/app.log")
+    file_handler = RotatingFileHandler(
+        "logs/app.log",
+        maxBytes=settings.LOG_MAX_BYTES,
+        backupCount=settings.LOG_BACKUP_COUNT
+    )
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
 

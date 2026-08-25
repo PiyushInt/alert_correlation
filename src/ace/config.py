@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     # Redis
     REDIS_URL: str = "redis://localhost:6380/0"
 
+    # Logging
+    LOG_MAX_BYTES: int = Field(default=10485760, description="Max bytes per log file (10MB)")
+    LOG_BACKUP_COUNT: int = Field(default=3, description="Number of backup log files to keep")
+
     # Correlation & Pipeline Constants
     MAX_INCIDENT_HOPS: int = Field(
         default=3, description="Maximum graph hops to search for related alerts"

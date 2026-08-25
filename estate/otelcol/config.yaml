@@ -18,7 +18,7 @@ exporters:
       insecure: true
   
   debug:
-    verbosity: detailed
+    verbosity: basic
 
   prometheus:
     endpoint: "0.0.0.0:8889"
@@ -29,7 +29,7 @@ service:
     traces:
       receivers: [otlp]
       processors: [batch]
-      exporters: [otlphttp/engine, debug]
+      exporters: [otlphttp/engine] # , debug] # Re-enable debug when needed
     metrics:
       receivers: [otlp]
       exporters: [prometheus]
