@@ -42,9 +42,7 @@ def setup_logging() -> None:
 
     # File handler
     file_handler = RotatingFileHandler(
-        "logs/app.log",
-        maxBytes=settings.LOG_MAX_BYTES,
-        backupCount=settings.LOG_BACKUP_COUNT
+        "logs/app.log", maxBytes=settings.LOG_MAX_BYTES, backupCount=settings.LOG_BACKUP_COUNT
     )
     file_handler.setFormatter(formatter)
     logger.addHandler(file_handler)
