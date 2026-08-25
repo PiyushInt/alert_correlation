@@ -6,7 +6,7 @@ services:
     - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
     - OTEL_SERVICE_NAME=frontend
     ports:
-    - 8080:8080
+    - "8080:8080"
     depends_on:
     - otel-collector
     logging:
@@ -87,9 +87,9 @@ services:
   otel-collector:
     image: otel/opentelemetry-collector-contrib:latest
     ports:
-    - 8889:8889
-    - 4317:4317
-    - 4318:4318
+    - "8889:8889"
+    - "4317:4317"
+    - "4318:4318"
     volumes:
     - ./otelcol/config.yaml:/etc/otelcol-contrib/config.yaml
     extra_hosts:
@@ -107,7 +107,7 @@ services:
     volumes:
     - ./prometheus:/etc/prometheus
     ports:
-    - 9090:9090
+    - "9090:9090"
     logging:
       driver: json-file
       options:
@@ -120,7 +120,7 @@ services:
     extra_hosts:
     - host.docker.internal:host-gateway
     ports:
-    - 9093:9093
+    - "9093:9093"
     logging:
       driver: json-file
       options:
@@ -131,7 +131,7 @@ services:
     volumes:
     - ./blackbox/blackbox.yml:/etc/blackbox_exporter/config.yml
     ports:
-    - 9115:9115
+    - "9115:9115"
     logging:
       driver: json-file
       options:
@@ -150,7 +150,7 @@ services:
     - --path.sysfs=/host/sys
     - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
     ports:
-    - 9100:9100
+    - "9100:9100"
     logging:
       driver: json-file
       options:
@@ -167,7 +167,7 @@ services:
     extra_hosts:
     - host.docker.internal:host-gateway
     ports:
-    - 10051:10051
+    - "10051:10051"
     logging:
       driver: json-file
       options:
@@ -194,7 +194,7 @@ services:
     - POSTGRES_PASSWORD=zabbix
     - ZBX_SERVER_HOST=zabbix-server
     ports:
-    - 8082:8080
+    - "8082:8080"
     logging:
       driver: json-file
       options:
