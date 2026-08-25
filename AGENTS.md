@@ -18,6 +18,15 @@
 - Run `./scripts/check.sh` before declaring a phase finished and paste the real output.
 - NEVER run a hold-out scenario (`eval/holdout/`). Running one during development destroys
   the evidence it exists to provide.
+- Every dependency goes into pyproject.toml in the SAME task that introduces
+  it. Never pip install or uv add without recording it. check.sh runs against
+  the installed venv; CI builds from pyproject alone. Three phases of green
+  local checks masked a red pipeline because of this.
+- Before fixing a CI failure, run `gh run view --log-failed` and read the
+  actual error. Runs #10 and #12 were fixes pushed without reading the log;
+  both introduced new failures. Diagnose, then change.
+- A phase is not complete until CI is green on main. Phases 6 and 7 were
+  tagged against a red pipeline.
 
 ## Environment
 
