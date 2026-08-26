@@ -92,8 +92,9 @@ contributed exactly 0 groupings on this estate**. The mechanism works
 correctly; the sparsity of the dependency map is the constraint.
 
 Phase 8 complete: tests tracked, two out-of-allowlist edits
-(`containment.py`, `ingestion/adapters/alertmanager.py`) reverted, CI green,
-merged to `main` and tagged `phase-8`.
+(`containment.py`, `ingestion/adapters/alertmanager.py`) reverted, merged to
+`main` and tagged `phase-8-complete`. Merged without a green CI run due to
+infrastructure-level workflow startup failures on GitHub Actions.
 
 ### Phase 8 Fix - Disk Fill Fault Robustness
 
