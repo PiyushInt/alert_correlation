@@ -1,4 +1,5 @@
 from ace.correlation.signals.base import Signal
+from ace.correlation.signals.dependency_proximity import DependencyProximitySignal
 from ace.correlation.signals.same_component import SameComponentSignal
 
 
@@ -9,4 +10,5 @@ def get_active_signals() -> list[Signal]:
     """
     return [
         SameComponentSignal(),
+        DependencyProximitySignal(),
     ]

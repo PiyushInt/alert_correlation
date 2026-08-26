@@ -129,6 +129,15 @@ class DependencyGraph:
             except nx.NetworkXNoPath:
                 return []
 
+    def shortest_path_length(self, source: UUID, target: UUID) -> int:
+        """
+        Shortest undirected path length between two components.
+        Raises NetworkXNoPath if disconnected, or NetworkXError if nodes missing.
+        """
+        with self._rw_lock:
+            undirected = self._graph.to_undirected(as_view=True)
+            return int(nx.shortest_path_length(undirected, source=source, target=target))
+
     def get_edge_data(self, u: UUID, v: UUID) -> Any:
         with self._rw_lock:
             if self._graph.has_edge(u, v):

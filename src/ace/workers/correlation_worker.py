@@ -59,6 +59,11 @@ def run_worker() -> None:
 
     ensure_consumer_group(r, stream_name, group_name)
 
+    from ace.dependency.graph import graph_instance
+
+    with SessionLocal() as db:
+        graph_instance.refresh(db)
+
     retries: dict[str, int] = {}
     last_reclaim = time.time()
 

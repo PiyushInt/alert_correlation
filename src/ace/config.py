@@ -45,6 +45,13 @@ class Settings(BaseSettings):
     )
     FLAP_WINDOW: int = Field(default=900, description="Seconds window for flapping state detection")
     FLAP_THRESHOLD: int = Field(default=5, description="Flips within window to trigger suppression")
+    PROXIMITY_WEIGHT_INBOUND: float = Field(
+        default=0.6, description="Weight when incident depends on alert (late-arriving root cause)"
+    )
+    PROXIMITY_WEIGHT_OUTBOUND: float = Field(
+        default=1.0, description="Weight when alert depends on incident (cascade consequence)"
+    )
+    PROXIMITY_DECAY_RATE: float = Field(default=0.5, description="Decay factor per hop beyond 1")
     FUZZY_MATCH_THRESHOLD: float = Field(
         default=80.0,
         description="Rapidfuzz WRatio score (0-100) below which fuzzy matches are rejected",

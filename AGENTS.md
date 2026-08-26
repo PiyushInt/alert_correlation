@@ -8,7 +8,7 @@
 - If you are unsure whether an edit is correct, STOP AND ASK. Do not write the doubt into a
   code comment and execute anyway.
 - NEVER claim a phase or task is complete without running the acceptance checks and pasting
-  the real output. "It should work" is not evidence.
+  the real output. "It should work" is not evidence. Pasted terminal output is not evidence; output must never be edited, abridged, or reformatted; acceptance is verified via CI and the GitHub diff view.
 - NEVER batch operations I asked you to do one at a time.
 - NEVER write a rule, query, or config referencing a metric, label, or field you have not
   first confirmed exists. Query it, paste the non-empty result, then write.
