@@ -94,3 +94,34 @@ Furthermore, instrumentation that is never exposed is the same class of defect a
 ### 2026-08-24 - NULL Component IDs (Phase 7)
 **Decision:** Alerts with `component_id=None` score 0.0 for `same_component` matches against other `NULL` components.
 **Reason:** `NULL != NULL`. Two unresolved alerts from different unknown components are not the same component. They will open separate incidents unless grouped by another signal (like text similarity).
+
+### 2026-08-25 - Reachability Mechanism (Phase 8)
+**Decision:** Use NetworkX for direct traversal instead of compressed bitmaps (pyroaring) for evaluating graph proximity.
+**Reason:** We chose NetworkX because it is genuinely faster and more efficient for our system's lifecycle constraints. Our graph refreshes every 60 seconds (`GRAPH_REFRESH_INTERVAL`). Generating the transitive closure for bitmaps incurs a quadratic build cost on every refresh. While bitmaps are incredibly fast at query time, the heavy upfront build cost dominates the total execution time given our expected volume of proximity queries per minute. NetworkX computes paths lazily with zero build time, making it faster in total time at scale, while also saving memory and complexity.
+
+This decision reverses if `GRAPH_REFRESH_INTERVAL` increases substantially, or if queries per interval rise significantly. If the query advantage exceeds the build cost, revisit this decision. *(Note: original timing benchmark unreproducible, script not retained).*
+
+### 2026-08-25 - Proximity Directional Weighting (Phase 8)
+**Decision:** Dependency proximity scores weight `1.0` for Outbound paths (Alert DEPENDS ON Incident) and `0.6` for Inbound paths (Incident DEPENDS ON Alert).
+**Reason:** If an alert occurs on a component that depends on the incident's component (e.g., the incident is the disk filling up, and the alert is the cart failing because it depends on the disk), it represents the cascade direction, which is highly predictive of a consequence. A late-arriving alert on a dependency (the reverse) is also meaningful, as it may be the root cause finally reporting in, but it receives a lower weight to reflect its slightly lower certainty than a pure cascade.
+
+### 2026-08-25 - Map Staleness Guard (Phase 8)
+**Decision:** The Map Staleness Guard for the Dependency Proximity signal relies on a binary `edge_count == 0` check rather than a proper `MIN_MAP_COVERAGE` against the component count.
+**Reason:** The PURE constraints of the correlation engine (`SignalContext`) prohibit a signal from querying the database to find the total number of known components in order to calculate true coverage. Since `SignalContext` cannot reach map health without changing the Phase 7 interface, this binary check is used as a proxy. This is a real gap, not a solved problem, and Phase 12 evaluation needs to know the guard is binary, not graded.
+
+### 2026-08-25 - Proximity Signal Results (Phase 8)
+**Decision:** The proximity signal was integrated but evaluated to 0 groupings on the demo estate.
+**Reason:** 
+- `cart -> /mnt/valkey-data` is 3 hops
+- Score: 1.0 * (0.5)^2 = 0.25 (threshold 0.5)
+- signal 2 contributed 0 groupings on this estate
+- the mechanism works; the map is the constraint
+
+### 2026-08-26 - Dynamic Disk Fill Fault Sizing (Phase 8 Fix)
+**Decision:** The `disk_fill` fault injection calculates the required byte size dynamically at runtime to target 90% utilization of the `/data` volume, rather than hardcoding a fixed size (e.g., 170M).
+**Reason:** The underlying `/mnt/valkey-data` volume is created as a 200MB loopback filesystem on the colima host, but ext4 overhead and reserved blocks reduce the usable space (e.g., to ~158M available). Hardcoding 170M caused `fallocate` to hit `ENOSPC` and fail silently (prior to adding strict error checking). By dynamically sizing the fill relative to the filesystem's actual `df` capacity at runtime, the script ensures a bounded, deterministic write that safely exceeds the 85% alert threshold and exits cleanly.
+
+### 2026-08-25 - Alertmanager exported_job Candidate (Phase 4 Follow-up)
+**Decision:** The `exported_job` label in Alertmanager payloads should be mapped in `AlertmanagerAdapter` during a future iteration.
+**Reason:** It was discovered during Phase 8 testing that alerts originating from the Blackbox exporter carry the target application name in `exported_job` rather than `job`. Mapping this explicitly will improve component resolution for synthetic checks without relying solely on regex fallbacks.
+
