@@ -1,4 +1,6 @@
 #!/bin/bash
+set -euo pipefail
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CAPTURES_DIR="$SCRIPT_DIR/../captures"
 mkdir -p "$CAPTURES_DIR"
@@ -11,12 +13,33 @@ START=$(date -u +%Y-%m-%dT%H:%M:%SZ)
 TARGET="/mnt/valkey-data"
 FAULT_ID="disk_fill_$(date +%s)"
 
-# 5. FAULT RECORD (start)
-echo "{\"fault_id\": \"$FAULT_ID\", \"fault_type\": \"disk_fill\", \"target\": \"$TARGET\", \"container\": \"estate-valkey-1\", \"start_time\": \"$START\", \"end_time\": null, \"size\": \"170M\"}" >> "$CAPTURES_DIR/faults.jsonl"
+# Calculate bytes needed to reach 90% disk utilization
+DF_OUTPUT=$(docker exec estate-valkey-1 df -B1 /data | tail -n 1)
+SIZE=$(echo "$DF_OUTPUT" | awk '{print $2}')
+USED=$(echo "$DF_OUTPUT" | awk '{print $3}')
+AVAIL=$(echo "$DF_OUTPUT" | awk '{print $4}')
 
-# 6. Corrected log line
-echo "$START [CHAOS] Injecting disk fill on $TARGET for ${DURATION}s"
-docker exec estate-valkey-1 fallocate -l 170M /data/fill.img
+TARGET_USED=$(( SIZE * 90 / 100 ))
+FILL_BYTES=$(( TARGET_USED - USED ))
+
+if [ "$FILL_BYTES" -le 0 ]; then
+    echo "Error: Disk is already >= 90% full."
+    exit 1
+fi
+if [ "$FILL_BYTES" -gt "$AVAIL" ]; then
+    echo "Error: Cannot reach 90% usage (need $FILL_BYTES bytes, but only $AVAIL available)."
+    exit 1
+fi
+
+echo "$START [CHAOS] Injecting disk fill on $TARGET for ${DURATION}s (target: ${FILL_BYTES} bytes)"
+docker exec estate-valkey-1 fallocate -l "${FILL_BYTES}" /data/fill.img
+docker exec estate-valkey-1 sync
+
+# Measure actual bytes written
+ACTUAL_BYTES=$(docker exec estate-valkey-1 stat -c%s /data/fill.img)
+
+# 5. FAULT RECORD (start)
+echo "{\"fault_id\": \"$FAULT_ID\", \"fault_type\": \"disk_fill\", \"target\": \"$TARGET\", \"container\": \"estate-valkey-1\", \"start_time\": \"$START\", \"end_time\": null, \"size\": \"${ACTUAL_BYTES}B\"}" >> "$CAPTURES_DIR/faults.jsonl"
 
 # 4. CLEANUP TRAP
 cleanup() {
