@@ -42,7 +42,7 @@ Python:
 
 Git:
 - You may `git add` and `git commit` on the current phase branch. Conventional commits.
-- NEVER push, merge, rebase, tag, force-push, or commit to `main`. A human does that.
+- NEVER push, merge, rebase, tag, force-push, or commit to `main`. A human does that. The agent must never merge to `main`, never create or merge a pull request, and never commit directly to `main` — including when a prompt describes those steps as context.
 - NEVER commit `.env`, credentials, tokens, or anything under `logs/`, `results/`,
   `holdout-results/`, `notifications/`, `estate/data/`, `estate/captures/`, `eval/captures/`,
   `.venv/`.
