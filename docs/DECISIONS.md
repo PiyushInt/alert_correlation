@@ -125,3 +125,6 @@ This decision reverses if `GRAPH_REFRESH_INTERVAL` increases substantially, or i
 **Decision:** The `exported_job` label in Alertmanager payloads should be mapped in `AlertmanagerAdapter` during a future iteration.
 **Reason:** It was discovered during Phase 8 testing that alerts originating from the Blackbox exporter carry the target application name in `exported_job` rather than `job`. Mapping this explicitly will improve component resolution for synthetic checks without relying solely on regex fallbacks.
 
+### 2026-08-26 - Estate Limitations: Zabbix Configuration
+**Decision:** The Zabbix configuration existed only inside a Docker volume with no export or seed path, making it a single point of failure for the cross-tool correlation premise since Gate A was first recorded. Note that it is now exported to `estate/zabbix/` but that no automated restore path exists yet. The `configuration.export` mechanism covers hosts, templates, and media types only. Zabbix actions are not exportable this way, so `action_7.json` is an API dump rather than an importable artifact, and the action linking trigger 32549 to mediatype 104 must be recreated manually after any reset. Note that the export has not yet been tested against a fresh zabbix-db, so its restorability is unverified.
+

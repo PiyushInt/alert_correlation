@@ -1,0 +1,52 @@
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "mediatypeid": "104",
+      "type": "4",
+      "name": "Correlation Engine Webhook",
+      "smtp_server": "",
+      "smtp_helo": "",
+      "smtp_email": "",
+      "exec_path": "",
+      "gsm_modem": "",
+      "username": "",
+      "passwd": "",
+      "status": "0",
+      "smtp_port": "25",
+      "smtp_security": "0",
+      "smtp_verify_peer": "0",
+      "smtp_verify_host": "0",
+      "smtp_authentication": "0",
+      "maxsessions": "1",
+      "maxattempts": "3",
+      "attempt_interval": "10s",
+      "message_format": "1",
+      "script": "var req = new HttpRequest();\nreq.addHeader('Content-Type: application/json');\nvar payload = JSON.parse(value);\nreq.post('http://host.docker.internal:8000/webhooks/zabbix', JSON.stringify(payload));\nreturn 'OK';",
+      "timeout": "30s",
+      "process_tags": "0",
+      "show_event_menu": "0",
+      "event_menu_url": "",
+      "event_menu_name": "",
+      "description": "",
+      "provider": "0",
+      "redirection_url": "",
+      "client_id": "",
+      "client_secret": "",
+      "authorization_url": "",
+      "token_url": "",
+      "tokens_status": "0",
+      "access_token": "",
+      "access_token_updated": "0",
+      "access_expires_in": "0",
+      "refresh_token": "",
+      "parameters": [
+        {
+          "name": "value",
+          "value": "{ALERT.MESSAGE}"
+        }
+      ]
+    }
+  ],
+  "id": 3
+}

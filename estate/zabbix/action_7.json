@@ -1,0 +1,40 @@
+{
+  "jsonrpc": "2.0",
+  "result": [
+    {
+      "actionid": "7",
+      "name": "Correlation Engine Disk Alerts",
+      "eventsource": "0",
+      "status": "0",
+      "esc_period": "1h",
+      "pause_suppressed": "1",
+      "notify_if_canceled": "1",
+      "pause_symptoms": "1",
+      "operations": [
+        {
+          "operationid": "11",
+          "actionid": "7",
+          "operationtype": "0",
+          "esc_period": "0",
+          "esc_step_from": "1",
+          "esc_step_to": "1",
+          "evaltype": "0",
+          "opconditions": [],
+          "opmessage": {
+            "default_msg": "0",
+            "subject": "Disk Alert",
+            "message": "{\"host\": \"{HOST.NAME}\", \"trigger_name\": \"{EVENT.NAME}\", \"severity\": \"{EVENT.SEVERITY}\", \"item_key\": \"{ITEM.KEY1}\", \"item_value\": \"{ITEM.VALUE1}\", \"event_time\": \"{EVENT.DATE}T{EVENT.TIME}Z\"}",
+            "mediatypeid": "104"
+          },
+          "opmessage_grp": [],
+          "opmessage_usr": [
+            {
+              "userid": "1"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "id": 2
+}
