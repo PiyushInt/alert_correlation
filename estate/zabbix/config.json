@@ -1,0 +1,58 @@
+{
+  "zabbix_export": {
+    "version": "7.4",
+    "host_groups": [
+      {
+        "uuid": "dc579cd7a1a34222933f24f52a68bcd8",
+        "name": "Linux servers"
+      }
+    ],
+    "hosts": [
+      {
+        "host": "docker-host-01",
+        "name": "docker-host-01",
+        "groups": [
+          {
+            "name": "Linux servers"
+          }
+        ],
+        "interfaces": [
+          {
+            "useip": "NO",
+            "dns": "zabbix-agent",
+            "interface_ref": "if1"
+          }
+        ],
+        "items": [
+          {
+            "name": "Valkey Data Disk Usage",
+            "key": "vfs.fs.size[/mnt/valkey-data,pused]",
+            "delay": "30s",
+            "value_type": "FLOAT",
+            "interface_ref": "if1",
+            "triggers": [
+              {
+                "expression": "last(/docker-host-01/vfs.fs.size[/mnt/valkey-data,pused])>85",
+                "name": "High disk usage on /mnt/valkey-data",
+                "priority": "HIGH"
+              }
+            ]
+          }
+        ]
+      }
+    ],
+    "media_types": [
+      {
+        "name": "Correlation Engine Webhook",
+        "type": "WEBHOOK",
+        "parameters": [
+          {
+            "name": "value",
+            "value": "{ALERT.MESSAGE}"
+          }
+        ],
+        "script": "var req = new HttpRequest();\nreq.addHeader('Content-Type: application/json');\nvar payload = JSON.parse(value);\nreq.post('http://host.docker.internal:8000/webhooks/zabbix', JSON.stringify(payload));\nreturn 'OK';"
+      }
+    ]
+  }
+}
