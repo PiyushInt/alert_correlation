@@ -74,3 +74,15 @@ paired with the real captured Prometheus HighCpuUsage payload
 (`instance: node-exporter:9100`). These share NO substring. Both resolved
 to the same `docker-host-01` component_id via seeded aliases that bridge
 the divergent identifiers.
+
+### Phase 8 - Dependency Proximity Signal Integration
+Phase 8 (DependencyProximitySignal) complete and tagged phase-8. Tests tracked, two out-of-allowlist edits reverted, CI green.
+
+### Gate A Status and Open Investigations
+**Gate A Status:**
+Originally verified: one disk-fill fault produced genuine alerts from both Prometheus (node-exporter:9100) and Zabbix (docker-host-01), bridged by seeded alias, one incident with source_tool_count = 2.
+Currently NOT reproducible. Re-verification on 2026-08-26 showed both tools detect the fault correctly — Prometheus HighDiskUsage fired 14:04:30–14:08:00Z at ratio 0.900; Zabbix trigger 32549 fired at 15:00:04Z and the alert reached ACE and persisted with the correct component_id. The Zabbix alert was never joined to any incident (incident_id NULL), and two Prometheus alerts from a single fault opened two separate incidents rather than one. Root cause not yet established.
+
+**Open Investigations:**
+- (a) Ingested Zabbix alert not correlated
+- (b) Single fault producing multiple incidents
