@@ -74,3 +74,18 @@ paired with the real captured Prometheus HighCpuUsage payload
 (`instance: node-exporter:9100`). These share NO substring. Both resolved
 to the same `docker-host-01` component_id via seeded aliases that bridge
 the divergent identifiers.
+
+
+### Phase 8 - Proximity Signal
+Integrated the `DependencyProximitySignal` successfully using a pure mathematical rule based on graph distances. The cross-component `CartDown` alert and the `HighDiskUsage` incident were located 3 hops apart (`cart -> valkey -> docker-host-01 -> /mnt/valkey-data`).
+
+With our directional weighting (1.0 for inbound) and exponential decay (`0.5^2`), the proximity score evaluated to:
+- `1.0 * 0.5^2 = 0.25`
+
+Since `0.25` is less than the grouping threshold of `0.5`, **Signal 2 contributed exactly 0 groupings on this estate**. The mechanism works correctly; the sparsity of the dependency map is the constraint.
+
+### Phase 8 Fix - Disk Fill Fault Robustness
+Updated `estate/chaos/fill_disk.sh` to fail non-zero on `fallocate` errors (`set -e`) and to dynamically calculate the target bytes to ensure usage exceeds the 85% rule threshold without hitting `ENOSPC`.
+
+**Estate Setup Limitation:** `estate/setup-volume.sh` must be re-run after every `colima stop`. Without it, the `/mnt/valkey-data` volume doesn't exist as a 200MB loopback device, and the fill lands on the ~19G VM root where usage stays near 8%, resulting in a silent false negative (no alert fires). Additionally, filesystem overhead leaves the usable volume space at ~172M rather than 200M.
+
