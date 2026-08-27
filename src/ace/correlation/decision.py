@@ -2,6 +2,8 @@ from typing import Any
 
 from ace.correlation.containment import check_containment
 from ace.correlation.signals.base import IncidentCentroid, Signal, SignalContext
+from ace.correlation.signals.cooccurrence import get_alert_type
+from ace.correlation.text_normalise import extract_normalised_text
 from ace.db.models.alerts import Alert
 from ace.db.models.incidents import Incident
 
@@ -58,8 +60,18 @@ def make_decision(
         # We do NOT pass `members` to the signals. We build the abstract centroid
         # representation of the incident, preventing signals from iterating members
         # and subverting the transitivity rules.
+
+        centroid_texts = set()
+        centroid_types = set()
+        for a in members:
+            centroid_texts.update(extract_normalised_text(a))
+            centroid_types.add(get_alert_type(a))
+
         centroid = IncidentCentroid(
-            component_ids={a.component_id for a in members if a.component_id}
+            component_ids={a.component_id for a in members if a.component_id},
+            normalised_text=centroid_texts,
+            alert_types=centroid_types,
+            cooccurrence_stats=context.alert_type_stats,
         )
 
         total_score = 0.0

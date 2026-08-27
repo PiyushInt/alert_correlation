@@ -57,7 +57,9 @@ def main():
 
                 if alias:
                     if alias.component_id != comp.id:
-                        raise ValueError(f"CONFLICT: Alias '{alias_name}' for tool '{source_tool}' already exists but belongs to component ID {alias.component_id}. Cannot map to {comp.id} ({comp.canonical_name}).")
+                        raise ValueError(
+                            f"CONFLICT: Alias '{alias_name}' for tool '{source_tool}' already exists but belongs to component ID {alias.component_id}. Cannot map to {comp.id} ({comp.canonical_name})."
+                        )
                 else:
                     alias = ComponentAlias(
                         component_id=comp.id,

@@ -14,6 +14,9 @@ class IncidentCentroid:
     """
 
     component_ids: set[uuid.UUID] = field(default_factory=set)
+    normalised_text: set[str] = field(default_factory=set)
+    alert_types: set[str] = field(default_factory=set)
+    cooccurrence_stats: dict[str, dict[str, int]] = field(default_factory=dict)
 
 
 class SignalResult:
@@ -23,10 +26,17 @@ class SignalResult:
 
 
 class SignalContext:
-    def __init__(self, db_session: Any, redis_client: Any, graph: Any):
+    def __init__(
+        self,
+        db_session: Any,
+        redis_client: Any,
+        graph: Any,
+        alert_type_stats: dict[str, dict[str, int]] | None = None,
+    ):
         self.db = db_session
         self.redis = redis_client
         self.graph = graph
+        self.alert_type_stats = alert_type_stats if alert_type_stats is not None else {}
 
 
 class Signal(Protocol):

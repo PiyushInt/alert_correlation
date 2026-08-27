@@ -19,7 +19,7 @@ eval "$PSQL -c 'SELECT count(*) AS alerts FROM alerts;' \
            -c 'SELECT count(*) AS incidents FROM incidents;'"
 
 echo "=== injecting (${DUR}s) ==="
-bash estate/chaos/fill_disk.sh "$DUR"
+bash estate/chaos/kill_service.sh "$DUR"
 echo "waiting for detection..."
 sleep 180
 

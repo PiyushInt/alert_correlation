@@ -7,6 +7,7 @@ One disk-fill fault: Prometheus resolved within four minutes, Zabbix sent nothin
 Zabbix also missed a second fault entirely (240s run). Multi-tool incidents therefore
 cannot reach full resolution. Config investigation — see estate/zabbix/action_7.json.
 Highest priority of the seven; the cross-tool premise depends on Zabbix firing reliably.
+*(Note: A `kill_service` fault test correctly showed both Prometheus and Blackbox resolving, forming ONE incident, and auto-resolving successfully with `closed_at` set. This demonstrates the pipeline recovery path works flawlessly when the tool actually sends a resolve, strengthening the case that the Zabbix gap is a Zabbix configuration problem rather than ours).*
 
 ## 2. Summed signal scores against a 0.5 threshold
 Signals are summed; each can reach 1.0. Any single signal firing clears the threshold
@@ -35,3 +36,7 @@ Phase 12 needs a clean run from fault injection only.
 Task 8.11 reconciled the estate to three logical components receiving alerts. But the
 2026-08-27 fault resolved both tools to /mnt/valkey-data, which is not among those
 three. See docs/ESTATE.md.
+- **Dedup Visibility Gap**: `ace/pipeline/dedup.py` drops duplicate alerts (incrementing `occurrence_count` in the database) without logging a `logger.info` or `logger.warning` message. This makes it appear as though an alert silently disappeared from the pipeline, causing diagnostic confusion.
+
+## 8. Incorrect Blackbox Alert Rule Text
+The Blackbox alert rule for the `cart` endpoint incorrectly contains the text `'Frontend is down (synthetic check)'` in its summary annotation. This is semantically wrong since it is probing the cart endpoint, not the frontend. This was observed during Phase 9 testing. Not a pipeline defect, but an estate configuration issue that should be fixed.

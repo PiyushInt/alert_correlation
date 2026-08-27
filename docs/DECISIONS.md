@@ -170,3 +170,33 @@ Seed the estate to reality, not to the document. Do not invent components to rea
 **Total logical components receiving alerts:** 3.
 
 The original `docs/ESTATE.md` table correctly identified 3 rows (valkey, cart, vm), though its alias mapping was slightly inaccurate compared to the actual tool outputs. The estate seed data (`components.yaml`) includes 6 logical components, 3 of which are present solely for tracing/inventory topology (`/mnt/valkey-data`, `valkey`, `load-generator`) and emit no alerts.
+
+### 2026-08-27 - Text Normalisation Rules (Phase 9)
+**Decision:** Text normalisation strips UUIDs, IPv4 addresses, ISO timestamps, ports, and standalone numeric values, while explicitly PRESERVING keywords like service names (`cart`, `checkout`), error keywords (`OOMKilled`, `CrashLoopBackOff`), metric names, and environments/tenants.
+**Decision 2:** We explicitly DO NOT include `alert.external_id` in the normalised string set.
+**Reason:** Stripping identifiers (UUIDs, IPs, ports, times, numbers) is necessary to avoid false negatives in string comparison (e.g. two crashes at different times or different pod IPs should still match). However, over-stripping aggressively makes everything look similar, inflating signal 3's score and driving over-merging. Preserving service names and error keywords ensures the core semantic meaning remains intact for fuzzy matching. Regarding `external_id`, it typically contains random hex hashes (fingerprints) which artificially drag down the similarity `WRatio` for no semantic reason.
+
+### 2026-08-27 - Text Similarity Signal Output (Phase 9)
+**Decision:** `TextSimilaritySignal` returns the raw `WRatio` score (`raw_score / 100.0`) unconditionally, with no internal threshold gate.
+**Reason:** Signals propose, containment disposes. A signal must report what it observes. Baking a threshold into the signal (e.g. gating it behind `FUZZY_MATCH_THRESHOLD`) prevents the correlation engine and the Phase 10 combination rule from seeing the actual similarity score and making an informed decision. Furthermore, `FUZZY_MATCH_THRESHOLD=85` was designed for Phase 4 component alias matching, which requires near-certainty, and is not applicable to broader alert correlation similarity.
+
+### 2026-08-27 - Incident Text Centroid (Phase 9)
+**Decision:** The text centroid for an incident is defined as the mathematical UNION of all unique normalised text tokens (extracted from labels and annotations) across all alerts in the incident. The incoming alert's normalised tokens are matched against this unified set, rather than performing pairwise comparisons against each member alert.
+**Reason:** Defining the text centroid as the union of all incident text prevents the pairwise transitivity trap. A signal receiving this centroid cannot determine which member contributed which token, making it structurally impossible to erroneously chain A-B and B-C to form A-C. It also simplifies scoring to a single `fuzz.WRatio` operation against the unified string.
+
+### 2026-08-27 - Co-occurrence Data Source (Phase 9)
+**Decision:** The historical co-occurrence job (Signal 4) explicitly excludes alerts where `source_tool = 'constructed'`.
+**Reason:** Signal 4 trains on historical incident groupings. Using synthetic/constructed alerts injected during testing would train the signal on fabricated groupings, producing a co-occurrence score that is entirely meaningless. The signal must measure how often real alerts fire together.
+**Status on Estate:** UNMEASURED. Because the `alert_type_stats` table currently contains only 6 rows (derived from a contaminated ledger with few real faults), Signal 4 cannot produce meaningful values. It is unmeasured on this estate, not "measured at zero," which is a distinction necessary for Phase 12 evaluation.
+
+### 2026-08-27 - Resolution Lifecycle Working on kill_service (Phase 9)
+**Decision:** Recorded successful end-to-end resolution lifecycle for `kill_service` fault.
+**Reason:** During Phase 9 validation, `kill_service` resulted in both Blackbox and Prometheus alerts resolving to the `cart` component, forming ONE incident with `source_tool_count = 2`, which then auto-resolved correctly (`closed_at` set). Since both tools sent `resolved` messages, this proved that the auto-resolution path functions correctly when tools actually emit resolution states, reinforcing that the missing Zabbix recoveries are a Zabbix config gap, not a pipeline defect.
+
+### 2026-08-27 - Phase 9 Measurements & Phase 10 Implications
+**Measurements:**
+- `text_similarity` scored **0.525** between a Blackbox and a Prometheus alert for the same fault (`kill_service`) on the same component (`cart`). This is the observed value on this estate from a single realistic run.
+- `cooccurrence` is **UNMEASURED**, not zero. The `alert_type_stats` table holds 6 rows derived from a contaminated ledger containing constructed alerts, rendering historical correlations unmeasurable on this dataset.
+
+**Implication for Phase 10:**
+With the current combination rule of summing scores against a static 0.5 threshold, a `text_similarity` of 0.525 alone would successfully merge two alerts that have NO component match and NO dependency proximity. This definitively quantifies the over-merge risk and proves that summing independent signals against a low threshold is fundamentally unsafe without a more rigorous combination logic (to be addressed in Phase 10).

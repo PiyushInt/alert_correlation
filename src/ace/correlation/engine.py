@@ -9,9 +9,10 @@ from ace.config import settings
 from ace.correlation.decision import make_decision
 from ace.correlation.lifecycle import accrete_alert, auto_resolve_if_ready, open_incident
 from ace.correlation.signals.base import SignalContext
+from ace.correlation.signals.cooccurrence import get_alert_type
 from ace.correlation.signals.registry import get_active_signals
 from ace.correlation.window import add_open_incident, get_open_incidents, remove_open_incident
-from ace.db.models.alerts import Alert
+from ace.db.models.alerts import Alert, AlertTypeStat
 from ace.db.models.incidents import Incident, IncidentAlert
 from ace.dependency.graph import graph_instance
 from ace.metrics import registry
@@ -89,7 +90,27 @@ def process_alert_correlation(db: Session, r: redis.Redis, alert: Alert) -> None
         remove_open_incident(r, inc_id)
 
     # 2. Make Decision (PURE)
-    context = SignalContext(db_session=db, redis_client=r, graph=graph_instance)
+    alert_type = get_alert_type(alert)
+    # Query stats for this alert type against any other type
+    stats_rows = (
+        db.query(AlertTypeStat)
+        .filter(
+            (AlertTypeStat.alert_type_a == alert_type) | (AlertTypeStat.alert_type_b == alert_type)
+        )
+        .all()
+    )
+
+    alert_type_stats = {}
+    for row in stats_rows:
+        key = f"{row.alert_type_a}|{row.alert_type_b}"
+        alert_type_stats[key] = {
+            "co_occurrence_count": row.co_occurrence_count,
+            "confirmed_count": row.confirmed_count,
+        }
+
+    context = SignalContext(
+        db_session=db, redis_client=r, graph=graph_instance, alert_type_stats=alert_type_stats
+    )
     signals = get_active_signals()
 
     decision = make_decision(alert, candidate_incidents, signals, context)
