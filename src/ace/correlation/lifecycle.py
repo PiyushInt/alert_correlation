@@ -103,7 +103,15 @@ def auto_resolve_if_ready(
     if incident.status == "resolved":
         return True
 
-    all_resolved = all(a.status == "resolved" for a in members)
+    all_resolved = True
+    for a in members:
+        if a.status == "resolved":
+            continue
+        # Check if a resolve alert exists for this firing member
+        resolve_exists = db.query(Alert).filter(Alert.resolves_alert_id == a.id).first()
+        if not resolve_exists:
+            all_resolved = False
+            break
 
     if all_resolved or window_expired:
         incident.status = "resolved"

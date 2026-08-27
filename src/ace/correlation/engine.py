@@ -28,6 +28,22 @@ def process_alert_correlation(db: Session, r: redis.Redis, alert: Alert) -> None
         # Already correlated (maybe re-queued)
         return
 
+    if alert.resolves_alert_id:
+        logger.info(f"Alert {alert.id} is a resolution. Triggering lifecycle check.")
+        original_alert = db.query(Alert).filter(Alert.id == alert.resolves_alert_id).first()
+        if original_alert and original_alert.incident_id:
+            incident = db.query(Incident).filter(Incident.id == original_alert.incident_id).first()
+            if incident:
+                member_links = (
+                    db.query(IncidentAlert).filter(IncidentAlert.incident_id == incident.id).all()
+                )
+                member_ids = [link.alert_id for link in member_links]
+                members = db.query(Alert).filter(Alert.id.in_(member_ids)).all()
+                if auto_resolve_if_ready(db, incident, members, window_expired=False):
+                    remove_open_incident(r, incident.id)
+                db.commit()
+        return
+
     # Critical severity bypass: notify immediately and ALSO correlate
     is_critical_bypass = alert.severity.lower() == settings.CRITICAL_BYPASS_SEVERITY.lower()
     if is_critical_bypass:
