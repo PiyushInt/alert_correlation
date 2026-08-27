@@ -277,6 +277,7 @@ Recorded in `docs/CONTEXT.md`. Summarised here because they shape what any phase
 - Report row counts for alerts, incidents and incident_alerts at task start and task end.
   Any decrease is a task failure regardless of the finding.
 - The alerts table is an immutable ledger. Investigations read it. They never reset it.
+
 ## What counts as evidence
 - Evidence is output produced by a command run in THIS task, pasted raw.
 - The prompt's description of a symptom is NOT evidence. Quoting it back is circular.
