@@ -159,24 +159,24 @@ built to prevent.
 
 ## Operating envelope — MEASURED IN PHASE 0, NOT ASSUMED
 
-| Parameter | Value | Source |
-|---|---|---|
-| Steady-state alert rate | 0.0 /hour (30-min idle window, all three tools) | Phase 0 |
-| Peak burst during an injected fault | 1 /minute | Phase 0 |
-| Measured duplicate rate | 47.5% within 5 min; 72.5% within 1 hour | Phase 0 |
-| Unresolved component identifiers | 35% (26 of 40 resolved) | Phase 0 |
-| Detection lag floor | ~2 min (collector metric_expiration 60s + rule `for: 1m`) | Phase 0 |
-| Alerts per fault, per tool | see below | Phase 0 |
+| Parameter                           | Value                                                     | Source  |
+| ----------------------------------- | --------------------------------------------------------- | ------- |
+| Steady-state alert rate             | 0.0 /hour (30-min idle window, all three tools)           | Phase 0 |
+| Peak burst during an injected fault | 1 /minute                                                 | Phase 0 |
+| Measured duplicate rate             | 47.5% within 5 min; 72.5% within 1 hour                   | Phase 0 |
+| Unresolved component identifiers    | 35% (26 of 40 resolved)                                   | Phase 0 |
+| Detection lag floor                 | ~2 min (collector metric_expiration 60s + rule `for: 1m`) | Phase 0 |
+| Alerts per fault, per tool          | see below                                                 | Phase 0 |
 
 Alerts per fault (Prometheus / Zabbix / Blackbox):
 
-| Fault | P | Z | B |
-|---|---|---|---|
-| disk_fill | 1 | 1 | 0 |
-| kill_service | 6 | 0 | 2 |
-| partition | 1 | 0 | 3 |
-| cpu_saturation | 3 | 0 | 1 |
-| inject_latency | 0 | 0 | 0 |
+| Fault          | P   | Z   | B   |
+| -------------- | --- | --- | --- |
+| disk_fill      | 1   | 1   | 0   |
+| kill_service   | 6   | 0   | 2   |
+| partition      | 1   | 0   | 3   |
+| cpu_saturation | 3   | 0   | 1   |
+| inject_latency | 0   | 0   | 0   |
 
 These are demo-estate numbers. They size the build; they are NOT claims about production.
 Every reported metric carries the qualifier "on the OpenTelemetry Demo under injected faults".
@@ -186,11 +186,11 @@ Every reported metric carries the qualifier "on the OpenTelemetry Demo under inj
 One disk-fill fault, two independent tools, 135 seconds apart, with genuinely divergent
 identifiers for the same filesystem:
 
-| Component | Prometheus | Zabbix | Blackbox |
-|---|---|---|---|
-| /mnt/valkey-data | `node-exporter:9100` | `docker-host-01` | (none) |
-| cart | (unlabelled) | (none) | `cart:8080`, `http://frontend:8080/api/cart` |
-| vm | `node-exporter:9100` | (none) | (none) |
+| Component        | Prometheus           | Zabbix           | Blackbox                                     |
+| ---------------- | -------------------- | ---------------- | -------------------------------------------- |
+| /mnt/valkey-data | `node-exporter:9100` | `docker-host-01` | (none)                                       |
+| cart             | (unlabelled)         | (none)           | `cart:8080`, `http://frontend:8080/api/cart` |
+| vm               | `node-exporter:9100` | (none)           | (none)                                       |
 
 No shared substring between `node-exporter:9100` and `docker-host-01`. Fuzzy matching alone
 will NOT connect them — Phase 4's resolver needs explicit alias handling. This is the real
@@ -198,11 +198,11 @@ cross-tool problem the project exists to solve, and it is the test data for Phas
 
 ## Complexity triggers — do not build ahead of these
 
-| Deferral | Trigger |
-|---|---|
-| NetworkX -> custom adjacency arrays | graph > 10k nodes OR p99 traversal > 50 ms |
-| Brute-force text compare -> MinHash/LSH | > 500 open-incident alerts in the window |
-| Single machine -> Kubernetes | never, for this project |
+| Deferral                                | Trigger                                    |
+| --------------------------------------- | ------------------------------------------ |
+| NetworkX -> custom adjacency arrays     | graph > 10k nodes OR p99 traversal > 50 ms |
+| Brute-force text compare -> MinHash/LSH | > 500 open-incident alerts in the window   |
+| Single machine -> Kubernetes            | never, for this project                    |
 
 At demo scale most of these will NOT fire. If an acceptance criterion asks you to prove a
 technique is faster and it is not at the measured scale, report that honestly and keep the
@@ -230,16 +230,16 @@ Only the application layer is written by us.
 
 ## Success metrics
 
-| Metric | Meaning | Target |
-|---|---|---|
-| Noise reduction | alert volume shrink vs measured baseline | 70%+ |
-| Grouping precision | of what we grouped, how much belonged | 85%+ |
-| Grouping recall | of what should have grouped, how much we caught | 75%+ |
-| Over-merge rate | two real incidents merged into one | <=5% |
-| Root cause, top 3 | true cause in the top three | 80%+ |
-| Cross-tool grouping rate | multi-tool alert sets correctly unified | tracked |
-| Added latency | delay before first notification | <= envelope |
-| Unresolved component rate | alerts we could not map to a component | < 5% (from 35% baseline) |
+| Metric                    | Meaning                                         | Target                   |
+| ------------------------- | ----------------------------------------------- | ------------------------ |
+| Noise reduction           | alert volume shrink vs measured baseline        | 70%+                     |
+| Grouping precision        | of what we grouped, how much belonged           | 85%+                     |
+| Grouping recall           | of what should have grouped, how much we caught | 75%+                     |
+| Over-merge rate           | two real incidents merged into one              | <=5%                     |
+| Root cause, top 3         | true cause in the top three                     | 80%+                     |
+| Cross-tool grouping rate  | multi-tool alert sets correctly unified         | tracked                  |
+| Added latency             | delay before first notification                 | <= envelope              |
+| Unresolved component rate | alerts we could not map to a component          | < 5% (from 35% baseline) |
 
 Scored on the TUNING set at Gate B and the FROZEN HOLD-OUT set at Gate C. Gate C governs.
 
@@ -267,3 +267,13 @@ Recorded in `docs/CONTEXT.md`. Summarised here because they shape what any phase
 - pytest for units; hypothesis for grouping invariants.
 - `docs/DECISIONS.md`: date, decision, alternatives rejected, reason.
 - `docs/PROGRESS.md`: a paragraph per phase.
+
+## Database safety — non-negotiable
+- NEVER run `alembic downgrade`, DROP, TRUNCATE, or DELETE against ace_db. Not to reset
+  state, not to get a clean run, not for any reason. If a task seems to require it, STOP
+  and ask.
+- Before any task that runs against the live database, run scripts/db_snapshot.sh and
+  paste the resulting filename as the first line of the walkthrough.
+- Report row counts for alerts, incidents and incident_alerts at task start and task end.
+  Any decrease is a task failure regardless of the finding.
+- The alerts table is an immutable ledger. Investigations read it. They never reset it.
