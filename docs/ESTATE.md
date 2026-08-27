@@ -27,16 +27,16 @@
 ## Naming Divergence
 | Component | Prometheus | Zabbix | Blackbox |
 |---|---|---|---|
-| docker-host-01 | node-exporter:9100, otel-collector:8889 | docker-host-01 | (none) |
-| cart | (none) | (none) | cart:8080 |
-| frontend | (none) | (none) | http://frontend:8080/api/cart |
+| valkey | node-exporter:9100 | docker-host-01 | (none) |
+| cart | Unknown | (none) | cart:8080 |
+| vm | node-exporter:9100 | (none) | (none) |
 
 *\* Note: The checkout service is permanently broken due to product-catalog crashing. The HighErrorRate rule baseline is consistently > 0.85, meaning the rule is unusable for capturing kill_service faults cleanly.*
-
-*\* Note (Task 8.11): The estate only emits 5 distinct raw component identifiers across all tools, which map to the 3 logical components shown above. The Phase 4 build plan's reference to "10 divergence-table components" is fictional and unsupported by the tools.*
 ```bash
 python estate/capture/naming_table.py --faults-file estate/captures/faults.jsonl --payloads-dir estate/captures/payloads
 ```
+
+*\* Note (2026-08-27, task 8.11): The table above is Phase 0 script output, retained as measured. A later review found the build plan's reference to "10 divergence-table components" is not supported by the estate — the tools emit 5 raw identifiers across all three tools. Note also that disk-fill alerts from Prometheus and Zabbix both resolve to `/mnt/valkey-data`, which this table does not capture; the `valkey` row above is the same pairing under a different label. Re-running naming_table.py would supersede this table.*
 
 ## Baseline Relatedness
 Baseline relatedness (kill_service, 8 alerts, 28 pairs): 6 CartDown firings are duplicates handled by Stage 2. Beyond deduplication, the fault produced 3 distinct alerts. The frontend probe failure (`http://frontend:8080/api/cart`) shares neither component nor text with the cart alerts — no signal except dependency proximity can group them. Single observation, one fault type.
