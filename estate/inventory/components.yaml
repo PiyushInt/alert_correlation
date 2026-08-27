@@ -46,6 +46,10 @@ components:
     aliases:
       - alias: frontend
         source_tool: trace
+      - alias: otel-collector:8889
+        source_tool: prometheus
+      - alias: http://frontend:8080/api/cart
+        source_tool: blackbox
 
   - canonical_name: valkey
     type: datastore

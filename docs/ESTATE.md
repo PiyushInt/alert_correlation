@@ -27,11 +27,13 @@
 ## Naming Divergence
 | Component | Prometheus | Zabbix | Blackbox |
 |---|---|---|---|
-| valkey | node-exporter:9100 | docker-host-01 | (none) |
-| cart | Unknown | (none) | cart:8080 |
-| vm | node-exporter:9100 | (none) | (none) |
+| docker-host-01 | node-exporter:9100, otel-collector:8889 | docker-host-01 | (none) |
+| cart | (none) | (none) | cart:8080 |
+| frontend | (none) | (none) | http://frontend:8080/api/cart |
 
 *\* Note: The checkout service is permanently broken due to product-catalog crashing. The HighErrorRate rule baseline is consistently > 0.85, meaning the rule is unusable for capturing kill_service faults cleanly.*
+
+*\* Note (Task 8.11): The estate only emits 5 distinct raw component identifiers across all tools, which map to the 3 logical components shown above. The Phase 4 build plan's reference to "10 divergence-table components" is fictional and unsupported by the tools.*
 ```bash
 python estate/capture/naming_table.py --faults-file estate/captures/faults.jsonl --payloads-dir estate/captures/payloads
 ```

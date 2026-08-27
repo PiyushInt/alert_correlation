@@ -154,3 +154,19 @@ Incident auto-resolution happens in `engine.py` / `lifecycle.py` under the follo
 
 ### 2026-08-27: Constructed Alerts in Ledger
 During testing, constructed alerts were injected directly into the append-only ledger to force correlation edge cases. These alerts exist in the database from this date forward and can be identified and excluded from measurements by filtering for `source_tool = 'constructed'`.
+
+### 2026-08-27: Component Count Reality Check (Task 8.11)
+
+**Context:**
+The build plan for Phase 4 cited a baseline of "10 divergence-table components." However, empirical analysis of the `estate/captures/` data reveals this number is fictional and was never verified against the actual tools.
+
+**Decision:**
+Seed the estate to reality, not to the document. Do not invent components to reach 10. The estate only has 3 logical components that actually receive alerts from the tools:
+1. `docker-host-01` (host, emits `docker-host-01` in Zabbix, `node-exporter:9100` and `otel-collector:8889` in Prometheus)
+2. `cart` (service, emits `cart:8080` in Blackbox)
+3. `frontend` (service, emits `http://frontend:8080/api/cart` in Blackbox)
+
+**Total emitted raw identifiers:** 5.
+**Total logical components receiving alerts:** 3.
+
+The original `docs/ESTATE.md` table correctly identified 3 rows (valkey, cart, vm), though its alias mapping was slightly inaccurate compared to the actual tool outputs. The estate seed data (`components.yaml`) includes 6 logical components, 3 of which are present solely for tracing/inventory topology (`/mnt/valkey-data`, `valkey`, `load-generator`) and emit no alerts.
