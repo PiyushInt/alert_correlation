@@ -150,7 +150,8 @@ def test_critical_alert_ok_state(db_session: Session, tmp_path: Path) -> None:
         assert "_banner" not in notification
 
 
-def test_lag_unknown_does_not_latch_bypass(db_session: Session) -> None:
+@patch("ace.bypass.health.psycopg.connect")
+def test_lag_unknown_does_not_latch_bypass(mock_connect, db_session: Session) -> None:
     """
     Proves that if a consumer group doesn't exist, lag is unknown (None),
     so the system remains OK even if older messages exist in the stream.
@@ -163,6 +164,7 @@ def test_lag_unknown_does_not_latch_bypass(db_session: Session) -> None:
 
     r = redis.from_url(settings.REDIS_URL)
     r.delete("alerts.raw")
+    r.delete("bypass_state")
 
     with open(FIXTURES_DIR / "mock-prom-high-disk.json") as f:
         payload = json.load(f)

@@ -10,8 +10,6 @@ from ace.metrics import registry
 
 logger = logging.getLogger(__name__)
 
-SEVERITY_ORDER = {"info": 1, "low": 2, "medium": 3, "high": 4, "critical": 5}
-
 
 def check_dedup(
     r: redis.Redis,
@@ -42,12 +40,6 @@ def check_dedup(
             if original_alert:
                 original_alert.occurrence_count += 1
 
-                # Highest severity wins
-                in_sev_val = SEVERITY_ORDER.get(incoming_alert.severity, 3)
-                orig_sev_val = SEVERITY_ORDER.get(original_alert.severity, 3)
-                if in_sev_val > orig_sev_val:
-                    original_alert.severity = incoming_alert.severity
-
                 # Update last_seen_at to reflect latest occurrence
                 incoming_db_alert = db.query(Alert).filter(Alert.id == incoming_alert.id).first()
                 if incoming_db_alert:
@@ -73,9 +65,6 @@ def check_dedup(
 
             original_alert = db.query(Alert).filter(Alert.id == original_id).first()
             if original_alert:
-                original_alert.status = "resolved"
-                original_alert.ends_at = incoming_alert.starts_at
-
                 # Link the incoming resolved alert to the firing one
                 incoming_db_alert = db.query(Alert).filter(Alert.id == incoming_alert.id).first()
                 if incoming_db_alert:

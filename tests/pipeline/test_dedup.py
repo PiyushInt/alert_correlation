@@ -90,7 +90,7 @@ def test_dedup_highest_severity_wins(redis_client: redis.Redis, db_session: Sess
 
     db_session.refresh(db_alert1)
     assert db_alert1.occurrence_count == 2
-    assert db_alert1.severity == "critical"  # Updated
+    assert db_alert1.severity == "warning"  # Not mutated
     assert db_alert1.last_seen_at == db_alert2.received_at
 
 
@@ -123,8 +123,8 @@ def test_dedup_resolved_closes_and_clears_key(
     assert not check_dedup(redis_client, fp, resolved_alert, db_session)
 
     db_session.refresh(db_firing)
-    assert db_firing.status == "resolved"
-    assert db_firing.ends_at == resolved_alert.starts_at
+    assert db_firing.status == "firing"
+    assert db_firing.ends_at is None
 
     db_session.refresh(db_resolved)
     assert db_resolved.resolves_alert_id == db_firing.id

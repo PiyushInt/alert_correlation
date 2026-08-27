@@ -128,3 +128,21 @@ This decision reverses if `GRAPH_REFRESH_INTERVAL` increases substantially, or i
 ### 2026-08-26 - Estate Limitations: Zabbix Configuration
 **Decision:** The Zabbix configuration existed only inside a Docker volume with no export or seed path, making it a single point of failure for the cross-tool correlation premise since Gate A was first recorded. Note that it is now exported to `estate/zabbix/` but that no automated restore path exists yet. The `configuration.export` mechanism covers hosts, templates, and media types only. Zabbix actions are not exportable this way, so `action_7.json` is an API dump rather than an importable artifact, and the action linking trigger 32549 to mediatype 104 must be recreated manually after any reset. Note that the export has not yet been tested against a fresh zabbix-db, so its restorability is unverified.
 
+## 2026-08-27 — The alerts table is append-only
+
+Discovered during task 8.7: dedup.py mutated the firing alert row when a resolve
+arrived, overwriting status and ends_at. No firing history survived for any
+resolved Prometheus alert.
+
+Decision: alert rows are never updated after insert, except for occurrence_count and last_seen_at,
+which is dedup's specified bookkeeping under Phase 5. last_seen_at is explicitly retained as it
+records the recency of duplicated alerts within the dedup window and does not represent a lifecycle
+mutation. A resolution is a NEW row carrying resolves_alert_id. Incident lifecycle reads resolved rows and decides whether to
+close; dedup does not perform lifecycle transitions.
+
+Alternative rejected: keeping the mutation and adding an audit table. Rejected
+because the ledger is the evidence base for every metric in Phases 12-13, and a
+table that rewrites itself cannot be replayed.
+
+Consequence: metrics computed over firing-alert counts before this date are
+unreliable. Recorded in CONTEXT.md.
