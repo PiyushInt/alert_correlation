@@ -23,4 +23,5 @@ estate/captures/traces/
 scratch/
 *.log
 *.pid
-backups/check_output.txt
+backups/
+check_output.txt
