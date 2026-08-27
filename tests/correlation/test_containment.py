@@ -91,3 +91,18 @@ def test_hard_partitions():
     containment = check_containment(alert_b, incident, members, graph)
     assert containment.allowed is False
     assert "Environment mismatch" in containment.reason
+
+
+def test_empty_centroid_refusal():
+    graph = MockGraph({})
+    incident = Incident(id=uuid.uuid4())
+
+    # Incident member has NO component (empty centroid)
+    alert_a = Alert(id=uuid.uuid4(), environment="prod", tenant="t1")
+    # Incoming alert HAS a component
+    alert_b = Alert(id=uuid.uuid4(), component_id=uuid.uuid4(), environment="prod", tenant="t1")
+
+    containment = check_containment(alert_b, incident, [alert_a], graph)
+
+    assert containment.allowed is False
+    assert "Empty Centroid" in containment.reason

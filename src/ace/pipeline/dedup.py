@@ -46,6 +46,13 @@ def check_dedup(
                     original_alert.last_seen_at = incoming_db_alert.received_at
 
                 db.commit()
+                logger.info(
+                    "DEDUPLICATION: Alert %s deduplicated against original alert %s (fingerprint %s). New occurrence_count: %d",  # noqa: E501
+                    incoming_alert.id,
+                    original_id,
+                    fingerprint,
+                    original_alert.occurrence_count,
+                )
                 registry.inc_counter("worker_deduped")
                 return True
             else:

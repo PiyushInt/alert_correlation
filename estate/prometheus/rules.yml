@@ -33,7 +33,7 @@ groups:
       severity: critical
       component: cart
     annotations:
-      summary: Frontend is down (synthetic check)
+      summary: Cart is down (synthetic check)
 
   - alert: HighDiskUsage
     expr: (node_filesystem_size_bytes{mountpoint="/mnt/valkey-data"} - node_filesystem_free_bytes{mountpoint="/mnt/valkey-data"}) / node_filesystem_size_bytes{mountpoint="/mnt/valkey-data"} > 0.85

@@ -40,6 +40,13 @@ def check_containment(
         incident_components = {
             a.component_id for a in incident_alerts if a.component_id is not None
         }
+
+        if not incident_components:
+            return ContainmentResult(
+                False,
+                "Empty Centroid: Incident has no resolved components to calculate distance against",
+            )
+
         if alert.component_id not in incident_components:
             # We must check if adding this component pushes the maximum pairwise distance
             # between any two components in the set {incident_components U alert.component_id}

@@ -52,3 +52,26 @@ destroyed the alerts ledger. See commit 1c18c2f.
 
 ### Proposed Change (as claimed — rejected, see status above)
 Update `check_containment` to immediately allow the join if `incident_components` is empty, e.g., `if not incident_components: return ContainmentResult(allowed=True)`.
+\n
+---
+
+## Update 2026-08-28
+
+Two corrections to the status above, after the empty-centroid path was investigated
+properly.
+
+The hypothesis was RIGHT that containment's empty-centroid handling was a real defect.
+It was WRONG about the direction. An empty centroid did not refuse with a misleading
+reason — it silently ALLOWED the merge, because the diameter check evaluated
+`len(new_set) > 1` as False and fell through to "Allowed". The refusal string quoted in
+this document was read from source, not observed firing, which is why the direction was
+never checked.
+
+Fixed by making the refusal explicit, with a reason that names the actual condition. See
+OPEN-ISSUES item 3. The proposed change in this document — allow the join — remains
+rejected; the fix went the opposite way.
+
+The claim in the status block that the root cause was "upstream, in Phase 4 component
+resolution" was also never confirmed. The original symptom is no longer reproducible;
+cross-tool correlation works and Gate A has been reproduced repeatedly.
+

@@ -21,9 +21,8 @@ would also merge on its own, with no component match and no proximity.
 
 This is a design decision, not a defect. It is an input to Phase 10.
 
-## 3. Empty-centroid default in containment.py — OPEN
-Loop over an empty component set leaves reachable=False, producing a misleading refusal
-reason. Real but never observed firing. See docs/HYPOTHESIS-correlation-join-gap.md.
+## 3. Empty centroid default fails containment with incorrect reason — CLOSED
+In containment.py, if the candidate incident has no resolved components, the incoming alert is now correctly refused if it has a component, returning the reason "Empty Centroid: Incident has no resolved components to calculate distance against".
 
 ## 4. exported_job unhandled — OPEN
 Field observed in Alertmanager payloads, deferred from Phase 8. Candidate contributor to
@@ -59,12 +58,8 @@ which is why EVALUATION lines vanished until the workers were restarted.
 Options: per-process log files, a WatchedFileHandler with external rotation, or stop
 relying on logs for durable evidence. Issue 8 took the third route for signal scores.
 
-## 10. Dedup logs nothing on a hit — OPEN
-pipeline/dedup.py increments occurrence_count and drops the duplicate without logging.
-An alert appears to vanish from the pipeline with no trace, which caused an hour of
-misdiagnosis on 2026-08-27. A visibility gap, not a defect.
+## 10. Dedup logs nothing on a hit — CLOSED
+pipeline/dedup.py now logs at INFO on every deduplication hit, recording the incoming alert ID, the original alert ID, the fingerprint, and the updated occurrence_count.
 
-## 11. Blackbox cart rule has wrong summary text — OPEN
-The Blackbox alert rule for the cart endpoint carries the annotation "Frontend is down
-(synthetic check)". It probes cart, not frontend. An operator reading the notification
-would be misled. Estate configuration, not a pipeline defect.
+## 11. Blackbox cart rule has wrong summary text — CLOSED
+The Blackbox alert rule for the cart endpoint carried the annotation "Frontend is down (synthetic check)". It has been corrected to "Cart is down (synthetic check)". Estate configuration updated.
