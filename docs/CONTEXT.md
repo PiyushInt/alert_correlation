@@ -35,3 +35,23 @@ The headline chain is composed as follows:
 - `docker-host-01 -> /mnt/valkey-data`: inventory (seeded)
 
 0 of 4 edges on the critical path are observed from traces. This represents a significant limitation of trace-derived maps in this estate.
+
+## The alerts ledger was mutable from Phase 5 to Phase 8
+
+Until 2026-08-27, dedup.py overwrote the firing alert row when a resolve arrived,
+setting status to 'resolved' and ends_at to the fire time. No firing alert survived
+its own resolution. A count of firing Prometheus alerts in the ledger returned 0.
+
+Consequences that cannot be undone:
+- Phase 0's operating envelope (duplicate rate, alerts per fault, unresolved rate)
+  was measured against a table that erased firing history.
+- Any grouping or noise-reduction figure computed over alert counts before this
+  date is unreliable.
+- The original Gate A record carried the same defect and was subsequently destroyed
+  by an agent running `alembic downgrade base` during a read-only investigation.
+  Gate A has since been reproduced: one disk-fill fault, Prometheus and Zabbix,
+  divergent identifiers, one incident with source_tool_count = 2.
+
+The defect was found by investigating a symptom in correlation, four stages
+downstream of its cause. Green CI and passing unit tests did not catch it at any
+point across four phases.
