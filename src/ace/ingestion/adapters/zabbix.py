@@ -95,9 +95,15 @@ class ZabbixAdapter(BaseAdapter):
         else:
             starts_at = datetime.now()
 
-        # Is it resolved? (If Zabbix sends recovery, but mock doesn't show status. Assume firing).
-        # We don't have a status in the mock payload, so default to firing.
-        status = "firing"
+        raw_status = alert_data.get("status")
+        if not raw_status:
+            status = "firing"
+            logger.warning(
+                f"Zabbix payload missing 'status' field, defaulting to 'firing'. "
+                f"external_id: {external_id}"
+            )
+        else:
+            status = "resolved" if raw_status.upper() == "RESOLVED" else "firing"
 
         candidates = self.extract_identifiers(alert_data)
         component_id, component_unresolved = resolver.resolve(candidates, "zabbix")

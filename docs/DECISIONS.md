@@ -200,3 +200,7 @@ The original `docs/ESTATE.md` table correctly identified 3 rows (valkey, cart, v
 
 **Implication for Phase 10:**
 With the current combination rule of summing scores against a static 0.5 threshold, a `text_similarity` of 0.525 alone would successfully merge two alerts that have NO component match and NO dependency proximity. This definitively quantifies the over-merge risk and proves that summing independent signals against a low threshold is fundamentally unsafe without a more rigorous combination logic (to be addressed in Phase 10).
+
+### 2026-08-28 - Zabbix Recovery Events (Ingestion)
+**Decision:** Zabbix adapter now parses the `status` field from incoming payloads. `PROBLEM` maps to `firing`, and `RESOLVED` maps to `resolved`. If the `status` field is completely absent (e.g., from older ledger payloads or malformed requests), it defaults to `firing` and logs a warning.
+**Reason:** Zabbix actions were updated to send recovery events. Without parsing `status`, all Zabbix events were hardcoded to `firing`, meaning any incident containing a Zabbix alert would remain perpetually open, destroying MTTR measurements and leaving incidents permanently active. Parsing recovery status allows the correlation engine to correctly close incidents when all member alerts have recovered.

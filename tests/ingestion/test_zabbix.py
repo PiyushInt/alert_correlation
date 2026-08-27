@@ -84,3 +84,79 @@ def test_zabbix_identifier_extraction() -> None:
     assert candidates[1].field_name == "host"
     assert candidates[2].value == "vfs.fs.size[/mnt/valkey-data,pused]"
     assert candidates[2].field_name == "item_key"
+
+
+def test_zabbix_status_parsing_resolved(db_session: Session) -> None:
+    adapter = ZabbixAdapter()
+
+    payload = {
+        "value": json.dumps(
+            {
+                "host": "docker-host-01",
+                "trigger_name": "High disk usage on /mnt/valkey-data",
+                "severity": "High",
+                "status": "RESOLVED",
+                "item_key": "vfs.fs.size[/mnt/valkey-data,pused]",
+                "item_value": "0.017385",
+                "event_time": "2026.08.27T18:47:04Z",
+            }
+        )
+    }
+
+    with patch("ace.ingestion.resolver.Resolver.resolve", return_value=(None, True)):
+        alerts = adapter.normalize(payload, db_session)
+        assert len(alerts) == 1
+        assert alerts[0].status == "resolved"
+
+
+def test_zabbix_status_parsing_problem(db_session: Session) -> None:
+    adapter = ZabbixAdapter()
+
+    payload = {
+        "value": json.dumps(
+            {
+                "host": "docker-host-01",
+                "trigger_name": "High disk usage on /mnt/valkey-data",
+                "severity": "High",
+                "status": "PROBLEM",
+                "item_key": "vfs.fs.size[/mnt/valkey-data,pused]",
+                "item_value": "98.013113",
+                "event_time": "2026.08.27T18:45:04Z",
+            }
+        )
+    }
+
+    with patch("ace.ingestion.resolver.Resolver.resolve", return_value=(None, True)):
+        alerts = adapter.normalize(payload, db_session)
+        assert len(alerts) == 1
+        assert alerts[0].status == "firing"
+
+
+def test_zabbix_status_missing_logs_warning(db_session: Session) -> None:
+    adapter = ZabbixAdapter()
+
+    payload = {
+        "value": json.dumps(
+            {
+                "host": "docker-host-01",
+                "trigger_name": "High disk usage on /mnt/valkey-data",
+                "severity": "High",
+                # status is omitted entirely
+                "item_key": "vfs.fs.size[/mnt/valkey-data,pused]",
+                "item_value": "98.013113",
+                "event_time": "2026.08.27T18:45:04Z",
+            }
+        )
+    }
+
+    with (
+        patch("ace.ingestion.resolver.Resolver.resolve", return_value=(None, True)),
+        patch("ace.ingestion.adapters.zabbix.logger.warning") as mock_warning,
+    ):
+        alerts = adapter.normalize(payload, db_session)
+        assert len(alerts) == 1
+        assert alerts[0].status == "firing"
+
+        # Verify the warning was logged
+        warning_calls = [call.args[0] for call in mock_warning.call_args_list]
+        assert any("Zabbix payload missing 'status' field" in arg for arg in warning_calls)
