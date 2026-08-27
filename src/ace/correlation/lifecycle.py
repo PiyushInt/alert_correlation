@@ -65,7 +65,13 @@ def open_incident(db: Session, initial_alert: Alert) -> Incident:
 
 
 def accrete_alert(
-    db: Session, alert: Alert, incident: Incident, members: list[Alert], score: float, reason: str
+    db: Session,
+    alert: Alert,
+    incident: Incident,
+    members: list[Alert],
+    score: float,
+    reason: str,
+    signal_scores: dict[str, float] | None = None,
 ) -> None:
     """Adds an alert to an existing incident."""
     now = datetime.datetime.now(datetime.UTC)
@@ -75,6 +81,7 @@ def accrete_alert(
         alert_id=alert.id,
         join_reason=reason,
         join_score=score,
+        signal_scores=signal_scores,
         joined_at=now,
     )
     db.add(incident_alert)

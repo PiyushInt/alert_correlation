@@ -154,7 +154,15 @@ def process_alert_correlation(db: Session, r: redis.Redis, alert: Alert) -> None
         # Find the members list for the chosen incident
         members = next(m for i, m in candidate_incidents if i.id == decision.incident.id)
 
-        accrete_alert(db, alert, decision.incident, members, decision.score, decision.reason)
+        accrete_alert(
+            db,
+            alert,
+            decision.incident,
+            members,
+            decision.score,
+            decision.reason,
+            decision.signal_scores,
+        )
         # Update window
         add_open_incident(r, decision.incident.id)
 

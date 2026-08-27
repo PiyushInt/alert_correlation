@@ -17,6 +17,7 @@ class DecisionResult:
         refusals: list[dict[str, str]] | None = None,
         evaluations: list[dict[str, Any]] | None = None,
         is_capped: bool = False,
+        signal_scores: dict[str, float] | None = None,
     ):
         self.incident = incident
         self.score = score
@@ -24,6 +25,7 @@ class DecisionResult:
         self.refusals = refusals if refusals is not None else []
         self.evaluations = evaluations if evaluations is not None else []
         self.is_capped = is_capped
+        self.signal_scores = signal_scores
 
 
 def make_decision(
@@ -40,6 +42,7 @@ def make_decision(
     best_incident: Incident | None = None
     best_score: float = -1.0
     best_reason: str = ""
+    best_signal_scores: dict[str, float] | None = None
 
     refusals = []
     evaluations = []
@@ -93,9 +96,17 @@ def make_decision(
             best_score = total_score
             best_incident = incident
             best_reason = f"Score {total_score:.2f} >= {threshold}"
+            best_signal_scores = signal_scores
 
     if best_incident:
-        return DecisionResult(best_incident, best_score, best_reason, refusals, evaluations)
+        return DecisionResult(
+            best_incident,
+            best_score,
+            best_reason,
+            refusals,
+            evaluations,
+            signal_scores=best_signal_scores,
+        )
 
     return DecisionResult(
         None, 0.0, "No suitable incident found or all candidates refused", refusals, evaluations

@@ -54,6 +54,7 @@ class IncidentAlert(Base):
     )
     join_reason: Mapped[str] = mapped_column(String(255), nullable=False)
     join_score: Mapped[float] = mapped_column(Float, nullable=False)
+    signal_scores: Mapped[dict[str, float] | None] = mapped_column(JSONB, nullable=True)
     joined_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
     __table_args__ = (

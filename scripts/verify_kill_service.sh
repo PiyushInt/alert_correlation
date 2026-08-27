@@ -37,4 +37,4 @@ eval "$PSQL -c 'SELECT incident_id, join_reason, join_score
                FROM incident_alerts ORDER BY joined_at DESC LIMIT 8;'"
 
 echo "=== per-signal scores ==="
-grep EVALUATION logs/app.log | tail -5
+eval "$PSQL -c 'SELECT incident_id, join_score, signal_scores FROM incident_alerts WHERE signal_scores IS NOT NULL ORDER BY joined_at DESC LIMIT 3;'"
