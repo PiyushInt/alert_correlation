@@ -284,3 +284,18 @@ Recorded in `docs/CONTEXT.md`. Summarised here because they shape what any phase
 - What the source code implies SHOULD happen is NOT evidence that it DID happen.
 - If a check was run and produced nothing, say so in words. Silence about a
   command you ran is a task failure.
+
+## Task hygiene — added after task 8.9
+- Exactly ONE snapshot per task, as the first command. Report that filename. Do not
+  take further snapshots during the task.
+- If you need clean database or Redis state to demonstrate something, STOP and ask.
+  A test that requires an empty ledger is designed wrong. Wiping state to escape an
+  error you caused is never the answer — investigate the error.
+- Never run flushdb, or any command that clears Redis, against the running estate.
+- Acceptance evidence comes from the estate. Hand-posted curl payloads, sed-edited
+  fixtures, and fabricated timestamps are not acceptance evidence. If the estate
+  cannot produce the condition, say so and stop.
+- Never change config at runtime to make a test pass. Say so and stop.
+- Never delete a branch, run git reset --hard, git clean, or discard uncommitted work.
+  A rejected task's work is EVIDENCE. If you think something should go, say so and stop.
+- Never commit command output files, scratch directories, or test artifacts.
