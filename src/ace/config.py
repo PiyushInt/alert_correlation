@@ -60,6 +60,23 @@ class Settings(BaseSettings):
         default=0.7, description="Minimum percentage of alerts needing mapped components"
     )
 
+    # Correlation Signal Settings
+    SIGNAL_WEIGHT_SAME_COMPONENT: float = Field(
+        default=1.0, description="Weight for same_component signal"
+    )
+    SIGNAL_WEIGHT_DEPENDENCY_PROXIMITY: float = Field(
+        default=0.6, description="Weight for dependency_proximity signal"
+    )
+    SIGNAL_WEIGHT_TEXT_SIMILARITY: float = Field(
+        default=0.5, description="Weight for text_similarity signal"
+    )
+    SIGNAL_WEIGHT_COOCCURRENCE: float = Field(
+        default=0.5, description="Weight for cooccurrence signal"
+    )
+    CORRELATION_THRESHOLD: float = Field(
+        default=1.0, description="Minimum weighted score to merge alerts"
+    )
+
     # Queue & Worker Settings
     STREAM_MAXLEN: int = Field(default=10000, description="Approximate cap on Redis Streams")
     MAX_CONSUMER_RETRIES: int = Field(default=3, description="Max retries before dead-lettering")

@@ -140,6 +140,7 @@ def process_alert_correlation(db: Session, r: redis.Redis, alert: Alert) -> None
                     "alert_id": str(alert.id),
                     "incident_id": eval_result["incident_id"],
                     "scores": eval_result["scores"],
+                    "weighted_scores": eval_result.get("weighted_scores", {}),
                     "total": eval_result["total"],
                 }
             },

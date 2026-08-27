@@ -33,12 +33,13 @@ def make_decision(
     candidate_incidents: list[tuple[Incident, list[Alert]]],
     signals: list[Signal],
     context: SignalContext,
-    threshold: float = 0.5,
 ) -> DecisionResult:
     """
     Evaluates candidate incidents and decides which one the alert should join.
     This function is PURE.
     """
+    from ace.config import settings
+
     best_incident: Incident | None = None
     best_score: float = -1.0
     best_reason: str = ""
@@ -79,19 +80,25 @@ def make_decision(
 
         total_score = 0.0
         signal_scores = {}
+        weighted_scores = {}
         for signal in signals:
             result = signal.score(alert, incident, centroid, context)
-            total_score += result.score
+            weight = getattr(settings, f"SIGNAL_WEIGHT_{signal.name.upper()}")
+            weighted_score = result.score * weight
+            total_score += weighted_score
             signal_scores[signal.name] = result.score
+            weighted_scores[signal.name] = weighted_score
 
         evaluations.append(
-            {"incident_id": str(incident.id), "scores": signal_scores, "total": total_score}
+            {
+                "incident_id": str(incident.id),
+                "scores": signal_scores,
+                "weighted_scores": weighted_scores,
+                "total": total_score,
+            }
         )
 
-        # In a real system with multiple signals we might average or weight them.
-        # For now, we sum (and there's only 1 signal).
-        # We assume 1 active signal for Phase 7.
-
+        threshold = settings.CORRELATION_THRESHOLD
         if total_score >= threshold and total_score > best_score:
             best_score = total_score
             best_incident = incident

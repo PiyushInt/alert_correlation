@@ -24,6 +24,14 @@ class StubInspectionSignal(Signal):
     def __init__(self):
         self.received_centroid = None
 
+    @property
+    def name(self) -> str:
+        return "same_component"
+
+    @property
+    def description(self) -> str:
+        return "stub"
+
     def score(
         self, alert: Alert, incident: Incident, centroid: IncidentCentroid, context: SignalContext
     ) -> SignalResult:

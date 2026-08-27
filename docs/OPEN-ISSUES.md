@@ -11,7 +11,7 @@ reads PROBLEM -> firing, RESOLVED -> resolved. Fixed in PR #12.
 NOTE: the action change is NOT exportable via configuration.export and must be
 recreated by hand after any Zabbix reset. See docs/DECISIONS.md.
 
-## 2. Summed signal scores against a 0.5 threshold — OPEN, decide before Phase 10
+## 2. Summed signal scores against a 0.5 threshold — CLOSED 2026-08-28
 Signals are summed; each can reach 1.0. Any single signal clearing 0.5 merges on its own.
 Measured values on this estate: same_component 1.0, dependency_proximity 1.0 (0.6 on a
 cross-component case), text_similarity 0.525, cooccurrence unmeasured.
