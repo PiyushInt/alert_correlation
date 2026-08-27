@@ -55,3 +55,18 @@ Consequences that cannot be undone:
 The defect was found by investigating a symptom in correlation, four stages
 downstream of its cause. Green CI and passing unit tests did not catch it at any
 point across four phases.
+
+## Zabbix does not send recovery events
+
+Verified 2026-08-27 by hand. A disk-fill fault produced firing alerts from both
+Prometheus and Zabbix. When the fault cleared, Prometheus sent a resolve within four
+minutes. Zabbix sent nothing — one webhook total for the whole fault, the firing one,
+twenty minutes after the disk returned to 1%.
+
+Not yet established whether the Zabbix trigger failed to recover, or recovered but the
+action has no recovery operation configured. See estate/zabbix/action_7.json.
+
+Consequence: in the cross-tool case this project exists to demonstrate, incidents
+cannot reach full resolution. Every multi-tool incident stays open indefinitely, held
+by the unresolved Zabbix member. Full-resolution auto-close and window-expiry closure
+are untestable against this estate as configured.
