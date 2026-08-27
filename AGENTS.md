@@ -299,3 +299,6 @@ Recorded in `docs/CONTEXT.md`. Summarised here because they shape what any phase
 - Never delete a branch, run git reset --hard, git clean, or discard uncommitted work.
   A rejected task's work is EVIDENCE. If you think something should go, say so and stop.
 - Never commit command output files, scratch directories, or test artifacts.
+- Commit your work on the phase branch BEFORE reporting a task complete. End every
+  walkthrough with `git log --oneline -1` and `git status`, pasted. A branch with no
+  commits is not a completed task, whatever the summary says.
