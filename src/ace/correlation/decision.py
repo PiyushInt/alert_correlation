@@ -1,20 +1,26 @@
-import logging
+from typing import Any
 
 from ace.correlation.containment import check_containment
 from ace.correlation.signals.base import IncidentCentroid, Signal, SignalContext
 from ace.db.models.alerts import Alert
 from ace.db.models.incidents import Incident
 
-logger = logging.getLogger(__name__)
-
 
 class DecisionResult:
     def __init__(
-        self, incident: Incident | None, score: float, reason: str, is_capped: bool = False
+        self,
+        incident: Incident | None,
+        score: float,
+        reason: str,
+        refusals: list[dict[str, str]] | None = None,
+        evaluations: list[dict[str, Any]] | None = None,
+        is_capped: bool = False,
     ):
         self.incident = incident
         self.score = score
         self.reason = reason
+        self.refusals = refusals if refusals is not None else []
+        self.evaluations = evaluations if evaluations is not None else []
         self.is_capped = is_capped
 
 
@@ -33,14 +39,18 @@ def make_decision(
     best_score: float = -1.0
     best_reason: str = ""
 
+    refusals = []
+    evaluations = []
+
     for incident, members in candidate_incidents:
         containment = check_containment(alert, incident, members, context.graph)
 
         if not containment.allowed:
-            # We must log the refusal loudly per the design rule!
-            logger.warning(
-                f"CONTAINMENT REFUSED: Alert {alert.id} refused by Incident {incident.id}. "
-                f"Reason: {containment.reason}"
+            refusals.append(
+                {
+                    "incident_id": str(incident.id),
+                    "reason": containment.reason,
+                }
             )
             continue
 
@@ -53,9 +63,15 @@ def make_decision(
         )
 
         total_score = 0.0
+        signal_scores = {}
         for signal in signals:
             result = signal.score(alert, incident, centroid, context)
             total_score += result.score
+            signal_scores[signal.name] = result.score
+
+        evaluations.append(
+            {"incident_id": str(incident.id), "scores": signal_scores, "total": total_score}
+        )
 
         # In a real system with multiple signals we might average or weight them.
         # For now, we sum (and there's only 1 signal).
@@ -67,6 +83,8 @@ def make_decision(
             best_reason = f"Score {total_score:.2f} >= {threshold}"
 
     if best_incident:
-        return DecisionResult(best_incident, best_score, best_reason)
+        return DecisionResult(best_incident, best_score, best_reason, refusals, evaluations)
 
-    return DecisionResult(None, 0.0, "No suitable incident found or all candidates refused")
+    return DecisionResult(
+        None, 0.0, "No suitable incident found or all candidates refused", refusals, evaluations
+    )

@@ -94,6 +94,36 @@ def process_alert_correlation(db: Session, r: redis.Redis, alert: Alert) -> None
 
     decision = make_decision(alert, candidate_incidents, signals, context)
 
+    # Log all containments that were refused
+    for refusal in decision.refusals:
+        logger.warning(
+            f"CONTAINMENT REFUSED: Alert {alert.id} refused by Incident {refusal['incident_id']}. "
+            f"Reason: {refusal['reason']}",
+            extra={
+                "extra_data": {
+                    "alert_id": str(alert.id),
+                    "incident_id": refusal["incident_id"],
+                    "reason": refusal["reason"],
+                }
+            },
+        )
+
+    # Log all evaluated candidate signals (allowed containments)
+    for eval_result in decision.evaluations:
+        logger.info(
+            f"EVALUATION: Alert {alert.id} evaluated against "
+            f"Incident {eval_result['incident_id']}. "
+            f"Total Score: {eval_result['total']:.2f}",
+            extra={
+                "extra_data": {
+                    "alert_id": str(alert.id),
+                    "incident_id": eval_result["incident_id"],
+                    "scores": eval_result["scores"],
+                    "total": eval_result["total"],
+                }
+            },
+        )
+
     # 3. Execute Decision
     if decision.incident:
         logger.info(
@@ -108,7 +138,18 @@ def process_alert_correlation(db: Session, r: redis.Redis, alert: Alert) -> None
         add_open_incident(r, decision.incident.id)
 
     else:
-        logger.info(f"Alert {alert.id} opened a new Incident. Reason: {decision.reason}")
+        if len(candidate_incidents) == 0:
+            logger.info(
+                f"Alert {alert.id} opened a new Incident. Reason: No candidates were retrieved "
+                f"from the window."
+            )
+        else:
+            inc_ids = [str(inc.id) for inc, _ in candidate_incidents]
+            logger.info(
+                f"Alert {alert.id} opened a new Incident. Reason: Candidates existed and every "
+                f"one was refused (evaluated {len(candidate_incidents)} candidates: {inc_ids})."
+            )
+
         incident = open_incident(db, alert)
         add_open_incident(r, incident.id)
 

@@ -30,6 +30,11 @@ class SignalContext:
 
 
 class Signal(Protocol):
+    @property
+    def name(self) -> str:
+        """The canonical name of this signal."""
+        ...
+
     def score(
         self, alert: Alert, incident: Incident, centroid: IncidentCentroid, context: SignalContext
     ) -> SignalResult:

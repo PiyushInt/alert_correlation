@@ -15,6 +15,9 @@ from ace.bypass.canary import run_canary_loop
 from ace.config import settings
 from ace.dependency.otlp import router as otlp_router
 from ace.jobs.graph_refresh import graph_refresh_loop
+from ace.logging import setup_logging
+
+setup_logging()
 
 
 @asynccontextmanager

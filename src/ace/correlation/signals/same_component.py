@@ -4,6 +4,10 @@ from ace.db.models.incidents import Incident
 
 
 class SameComponentSignal(Signal):
+    @property
+    def name(self) -> str:
+        return "same_component"
+
     def score(
         self, alert: Alert, incident: Incident, centroid: IncidentCentroid, context: SignalContext
     ) -> SignalResult:

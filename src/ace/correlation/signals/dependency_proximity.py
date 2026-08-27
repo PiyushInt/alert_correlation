@@ -10,6 +10,10 @@ logger = logging.getLogger(__name__)
 
 
 class DependencyProximitySignal(Signal):
+    @property
+    def name(self) -> str:
+        return "dependency_proximity"
+
     def score(
         self, alert: Alert, incident: Incident, centroid: IncidentCentroid, context: SignalContext
     ) -> SignalResult:

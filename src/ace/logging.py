@@ -52,8 +52,7 @@ def setup_logging() -> None:
     logging.getLogger("uvicorn.access").handlers = [stdout_handler]
 
 
-# Setup on import
-setup_logging()
+# Setup on import is removed to avoid redundant execution when module is imported
 
 
 def get_logger(name: str) -> logging.Logger:

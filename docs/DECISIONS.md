@@ -151,3 +151,6 @@ Incident auto-resolution happens in `engine.py` / `lifecycle.py` under the follo
 - **Full resolution**: An incident closes (`status`="resolved", `closed_at` set) if every firing `Alert` in its `incident_alerts` membership has a corresponding resolved `Alert` (matched via `resolves_alert_id`).
 - **Partial resolution**: If some members resolve but others do not, the incident's `status` remains `"open"`.
 - **Window expiry**: An incident auto-closes without resolution if its window has passed. This is governed by the difference between the incoming `alert.starts_at` and the `incident.opened_at` exceeding the config value `settings.CORRELATION_WINDOW`.
+
+### 2026-08-27: Constructed Alerts in Ledger
+During testing, constructed alerts were injected directly into the append-only ledger to force correlation edge cases. These alerts exist in the database from this date forward and can be identified and excluded from measurements by filtering for `source_tool = 'constructed'`.
