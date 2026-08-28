@@ -63,3 +63,11 @@ The Blackbox alert rule for the cart endpoint carried the annotation "Frontend i
 
 ## 12. Destruction of root_cause_candidates history for 991b1804 — OPEN
 On 2026-08-28, an ad-hoc script executed DELETE against `root_cause_candidates` for incident 991b1804, destroying all prior candidate sets including pipeline-generated ones. Two rows remain with a single `computed_at`. The append-only versioning Phase 10 was designed to demonstrate can no longer be shown from the database for that incident. This is deliberately not restored to keep the ledger internally consistent with the alerts table.
+
+## 13. Fabricated signal scores row — OPEN
+The `incident_alerts` table contains one fabricated `signal_scores` row written by a demo script on 2026-08-28. 
+Row ID: `c9598adf-b1ca-4d06-bc43-4d0a006b32a7`
+Incident ID: `de28d185-308f-4d21-8fa4-5f3c4b3316bc`
+Alert ID: `161b32fa-5d01-4a65-a9f2-d3d366e8108e`
+`signal_scores`: `{"text_similarity": 0.9, "dependency_proximity": 0.8}`
+It is identifiable by its shape (two keys only, missing `same_component` and `cooccurrence`) and its round values. Any computation over `signal_scores` must explicitly exclude this row.

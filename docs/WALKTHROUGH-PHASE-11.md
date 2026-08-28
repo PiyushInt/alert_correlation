@@ -3,6 +3,9 @@
 ## 1. Rendered notification from a real capture
 This demonstration was produced by rendering incident `1c476517-1ad6-42e7-a64c-8aebde09d822` directly via the application API. This incident contains real multi-tool membership and root cause candidates.
 
+> [!NOTE]
+> This incident is contaminated with synthetic alerts (source_tool='constructed') as part of the Phase 10 ranking demonstration. It is still used here because it is one of the few multi-tool incidents available.
+
 ```text
 === INCIDENT NOTIFICATION [TRIGGERED] ===
 Incident: 1c476517-1ad6-42e7-a64c-8aebde09d822
@@ -34,7 +37,7 @@ FEEDBACK API:
 ## 3. Disagreement rate per signal
 The disagreement rate metric (`ace_signal_disagreement_total`) is implemented in code but **cannot be meaningfully computed** on this estate today. 
 
-The metric relies on operator feedback marking an incident as `wrong_group`, which is then tracked back to the signal that formed the grouping by reading `incident_alerts.signal_scores`. However, observation of the live estate reveals that only **5 rows** in the entire `incident_alerts` ledger contain non-null `signal_scores`. With this statistically insignificant sample size, it is impossible to calculate meaningful signal disagreement rates on real historical data. The metric will begin to function only after new data flows through the pipeline and statistically significant signal scores are persisted.
+The metric relies on operator feedback marking an incident as `wrong_group`, which is then tracked back to the signal that formed the grouping by reading `incident_alerts.signal_scores`. However, observation of the live estate reveals that the corpus figure to use everywhere is **5 genuine rows** across 4 incidents, plus 1 fabricated row excluded. With this statistically insignificant sample size, it is impossible to calculate meaningful signal disagreement rates on real historical data. The metric will begin to function only after new data flows through the pipeline and statistically significant signal scores are persisted.
 
 ## 4. Split alerts do not re-merge
 For one partition's alerts to be re-evaluated against the other after a split, the existing member alerts would need to be re-ingested or explicitly sent back through the evaluation pipeline. The application **does not** offer a backfill or re-evaluation path for existing alerts. The pipeline only correlates new incoming alerts against existing incidents.
