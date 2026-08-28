@@ -101,7 +101,8 @@ def rank_root_cause_candidates(
                         is_earliest = True
 
             # 'uncertain' is True if there is no traversal evidence supporting the rank
-            # (i.e. the candidate is just a 'self' centroid member with 0 hops, not discovered via edges)
+            # (i.e. the candidate is just a 'self' centroid member with 0 hops,
+            # not discovered via edges)
             uncertain = info["direction"] == "self" or info["hops"] == 0
 
             evidence = {
