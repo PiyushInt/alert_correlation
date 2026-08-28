@@ -3,16 +3,16 @@
 ## Alert Payloads
 **Command:**
 ```bash
-jq -c 'select(.message | test("source_tool|component_id", "i"))' logs/app.log
+jq -c 'select(.message | test("source_tool|component_id", "i"))' logs/app-*.log
 ```
 **Output:**
 (Empty)
-Findings: The alert payloads are not logged in `app.log`.
+Findings: The alert payloads are not logged in `app-*.log`.
 
 ## Correlation Decisions
 **Command:**
 ```bash
-jq -r 'select(.logger == "ace.correlation.engine" and (.message | test("joined|opened|candidate|score", "i"))) | .message' logs/app.log | sort | uniq -c
+jq -r 'select(.logger == "ace.correlation.engine" and (.message | test("joined|opened|candidate|score", "i"))) | .message' logs/app-*.log | sort | uniq -c
 ```
 **Output:**
 ```
@@ -41,8 +41,8 @@ jq -r 'select(.logger == "ace.correlation.engine" and (.message | test("joined|o
 ## Containment Refusals
 **Command:**
 ```bash
-jq -c 'select(.logger == "ace.correlation.engine" and (.message | test("containment refusal", "i")))' logs/app.log
+jq -c 'select(.logger == "ace.correlation.engine" and (.message | test("containment refusal", "i")))' logs/app-*.log
 ```
 **Output:**
 (Empty)
-Findings: No containment refusal lines exist in app.log.
+Findings: No containment refusal lines exist in app-*.log.

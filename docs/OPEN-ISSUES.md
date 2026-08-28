@@ -43,17 +43,10 @@ docs/ESTATE.md.
 signal_scores JSONB column added to incident_alerts, populated at join time from
 Signal.name keys. Existing rows left NULL; not backfilled. Fixed in PR #13.
 
-## 9. app.log grew to 120GB — rotation is broken with multiple writers — OPEN
-LOG_MAX_BYTES is 10MB with 3 backups, so the file should never exceed ~40MB. It reached
-120GB and was deleted by hand on 2026-08-28.
-
-Cause: RotatingFileHandler is not multi-process safe. The API and both workers each open
-logs/app.log; when one rotates, the others continue writing to the deleted inode and the
-size limit stops being enforced. Deleting the file also orphans every open descriptor,
-which is why EVALUATION lines vanished until the workers were restarted.
-
-Options: per-process log files, a WatchedFileHandler with external rotation, or stop
-relying on logs for durable evidence. Issue 8 took the third route for signal scores.
+## 9. app.log grew to 120GB — rotation is broken with multiple writers — CLOSED
+The API and both workers wrote to the same shared `logs/app.log`; when one rotated, the others continued writing to the deleted inode, breaking the size limit.
+**Resolution:** Addressed in the `fix/log-rotation` branch. Logging now generates unique filenames per process using its base name and PID (e.g. `app-api-<pid>.log`), and a cleanup routine automatically deletes files for dead processes on startup.
+**Note:** The 120GB unrecoverable log file was manually deleted by hand on 2026-08-28.
 
 ## 10. Dedup logs nothing on a hit — CLOSED
 pipeline/dedup.py now logs at INFO on every deduplication hit, recording the incoming alert ID, the original alert ID, the fingerprint, and the updated occurrence_count.

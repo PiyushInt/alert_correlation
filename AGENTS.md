@@ -262,7 +262,7 @@ Recorded in `docs/CONTEXT.md`. Summarised here because they shape what any phase
 ## Engineering rules
 
 - Full type hints, mypy strict on `src/`.
-- Structured JSON logging to stdout and `./logs/app.log`, trace id carried end to end.
+- Structured JSON logging to stdout and `./logs/app-*.log`, trace id carried end to end.
 - Alembic migration for every schema change. No manual DDL.
 - pytest for units; hypothesis for grouping invariants.
 - `docs/DECISIONS.md`: date, decision, alternatives rejected, reason.
