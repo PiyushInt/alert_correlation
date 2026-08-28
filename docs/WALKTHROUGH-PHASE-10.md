@@ -1,4 +1,3 @@
-backups/ace_db-20260828-104523.dump
 
 # Phase 10: Root Cause Ranker Walkthrough
 
@@ -31,9 +30,11 @@ The `rank_root_cause_candidates` algorithm:
 3. Scores each candidate based on directional proximity (e.g. `inbound` receives higher base score), penalizing by graph distance.
 4. Awards significant bonuses for being the origin of the earliest alert in the incident.
 5. Emits explicit evidence for explainability, including whether the candidate fired an alert and its graph distance.
-6. Flags `uncertain=True` when the graph edge count <= 10, highlighting our lack of topological visibility.
+6. Computes the `uncertain` flag per-candidate from traversal evidence, rather than relying on a global graph edge count.
 
 ### Demonstration
+
+**Note:** The 9.0/4.0 demonstration output below was produced by an ad-hoc script that executed DELETE against `root_cause_candidates`, destroying the prior candidate sets for that incident. The figures are accurate; the method that produced them violated the append-only design.
 
 Running the ranker against incident `991b1804-d7f2-45c4-af6e-6f6a400d180e` yields:
 ```

@@ -30,10 +30,14 @@ to do better; if so, say so rather than forcing the number.
 
 ## 6. Ledger contamination — OPEN
 The alerts table mixes real fault alerts, 12 constructed rows (source_tool='constructed'),
-and older hand-posted test rows. Not fixable by editing — the ledger is append-only.
+and hundreds of truncated noise alerts from earlier phases. A clean dataset is required
+for Phase 13 tuning, but we are bound by append-only rules.
+
+## 7. Destruction of root_cause_candidates history for 991b1804 — CLOSED
+On 2026-08-28, an ad-hoc script executed DELETE against `root_cause_candidates` for incident 991b1804, destroying all prior candidate sets including pipeline-generated ones. Two rows remain with a single `computed_at`. The append-only versioning Phase 10 was designed to demonstrate can no longer be shown from the database for that incident. This is deliberately not restored to keep the ledger internally consistent with the alerts table.
 Phase 12 needs a clean run from fault injection only.
 
-## 7. Component-count ambiguity — OPEN
+## 8. Component-count ambiguity — OPEN
 Task 8.11 reconciled the estate to three logical components receiving alerts. But faults
 resolve both tools to /mnt/valkey-data, which is not among those three. See
 docs/ESTATE.md.
