@@ -72,15 +72,17 @@ def rank_root_cause_candidates(db: Session, incident: Incident, current_time: da
             score = 0.0
             
             # Base score based on direction (comp relative to centroid)
-            # If comp is "inbound" to centroid (centroid DEPENDS ON comp), comp is upstream -> high probability of cause.
+            # inbound: Centroid depends on this component (upstream). Very likely root cause.
+            # outbound: This component depends on centroid (downstream). Likely a symptom.
+            # self: No topological traversal, just a component that was in the incident.
             if info["direction"] == "inbound":
-                score += 10.0
+                score += 20.0
             elif info["direction"] == "outbound":
                 score += 5.0
             elif info["direction"] == "self":
-                score += 8.0
+                score += 2.0
             else:
-                score += 3.0
+                score += 1.0
                 
             # Penalize by hops
             score -= info["hops"] * 2.0
@@ -94,7 +96,9 @@ def rank_root_cause_candidates(db: Session, incident: Incident, current_time: da
                         score += 5.0
                         is_earliest = True
 
-            uncertain = graph_instance.get_edge_count() <= 10
+            # 'uncertain' is True if there is no traversal evidence supporting the rank
+            # (i.e. the candidate is just a 'self' centroid member with 0 hops, not discovered via edges)
+            uncertain = (info["direction"] == "self" or info["hops"] == 0)
 
             evidence = {
                 "hops": info["hops"],

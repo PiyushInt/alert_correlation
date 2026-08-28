@@ -79,17 +79,18 @@ def test_ranker_logic():
         added_candidates = [call.args[0] for call in db.add.call_args_list]
         added_candidates.sort(key=lambda c: c.rank)
         
-        # comp3 is inbound (10.0 base) - 2.0 (1 hop) = 8.0
-        # comp1 is self (8.0 base) - 0.0 + 2.0 (fired) + 5.0 (earliest) = 15.0
-        # comp2 is self (8.0 base) - 0.0 + 2.0 (fired) = 10.0
+        # comp3 is inbound (20.0 base) - 2.0 (1 hop) = 18.0
+        # comp1 is self (2.0 base) - 0.0 + 2.0 (fired) + 5.0 (earliest) = 9.0
+        # comp2 is self (2.0 base) - 0.0 + 2.0 (fired) = 4.0
         
-        assert added_candidates[0].component_id == comp1
-        assert added_candidates[1].component_id == comp2
-        assert added_candidates[2].component_id == comp3
+        assert added_candidates[0].component_id == comp3
+        assert added_candidates[1].component_id == comp1
+        assert added_candidates[2].component_id == comp2
         
-        assert added_candidates[0].evidence["is_earliest_alert"] is True
-        assert added_candidates[1].evidence["is_earliest_alert"] is False
-        assert added_candidates[2].evidence["fired_alert"] is False
+        assert added_candidates[0].evidence["is_earliest_alert"] is False
+        assert added_candidates[1].evidence["is_earliest_alert"] is True
+        assert added_candidates[0].evidence["fired_alert"] is False
         
-        for cand in added_candidates:
-            assert cand.uncertain is True  # edge count is 5
+        assert added_candidates[0].uncertain is False # Traversed (inbound, 1 hop)
+        assert added_candidates[1].uncertain is True  # self, 0 hops
+        assert added_candidates[2].uncertain is True  # self, 0 hops

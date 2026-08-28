@@ -12,14 +12,12 @@ NOTE: the action change is NOT exportable via configuration.export and must be
 recreated by hand after any Zabbix reset. See docs/DECISIONS.md.
 
 ## 2. Summed signal scores against a 0.5 threshold — CLOSED 2026-08-28
-Signals are summed; each can reach 1.0. Any single signal clearing 0.5 merges on its own.
-Measured values on this estate: same_component 1.0, dependency_proximity 1.0 (0.6 on a
-cross-component case), text_similarity 0.525, cooccurrence unmeasured.
+In Phase 10, the threshold was raised to 1.0 and signals are now weighted.
+Measured values on this estate: same_component 1.0, dependency_proximity 0.0 (fixed distance-0 collinearity, previously 1.0 or 0.60 on cross-component), text_similarity 0.855 (after fixing Blackbox rule text), cooccurrence unmeasured.
 
-Observed: signal 2 alone merged two unrelated alerts at 0.60. text_similarity at 0.525
-would also merge on its own, with no component match and no proximity.
+Observed: Previously, signal 2 alone merged two unrelated alerts at 0.60. With the new 1.0 threshold and weighted signals, circumstantial signals require corroboration to merge.
 
-This is a design decision, not a defect. It is an input to Phase 10.
+This is a design decision implemented in Phase 10.
 
 ## 3. Empty centroid default fails containment with incorrect reason — CLOSED
 In containment.py, if the candidate incident has no resolved components, the incoming alert is now correctly refused if it has a component, returning the reason "Empty Centroid: Incident has no resolved components to calculate distance against".
@@ -33,7 +31,7 @@ Phase 0 baseline. A tuning target for Phase 13, not a defect. The estate may not
 to do better; if so, say so rather than forcing the number.
 
 ## 6. Ledger contamination — OPEN
-The alerts table mixes real fault alerts, 9 constructed rows (source_tool='constructed'),
+The alerts table mixes real fault alerts, 12 constructed rows (source_tool='constructed'),
 and older hand-posted test rows. Not fixable by editing — the ledger is append-only.
 Phase 12 needs a clean run from fault injection only.
 
