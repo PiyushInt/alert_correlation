@@ -1,3 +1,4 @@
+import uuid
 from typing import Any
 
 from ace.correlation.containment import check_containment
@@ -33,6 +34,7 @@ def make_decision(
     candidate_incidents: list[tuple[Incident, list[Alert]]],
     signals: list[Signal],
     context: SignalContext,
+    suppressed_fingerprints: dict[uuid.UUID, set[str]] | None = None,
 ) -> DecisionResult:
     """
     Evaluates candidate incidents and decides which one the alert should join.
@@ -49,7 +51,12 @@ def make_decision(
     evaluations = []
 
     for incident, members in candidate_incidents:
-        containment = check_containment(alert, incident, members, context.graph)
+        suppressed_fingerprints_set = (
+            suppressed_fingerprints.get(incident.id, set()) if suppressed_fingerprints else set()
+        )
+        containment = check_containment(
+            alert, incident, members, context.graph, suppressed_fingerprints_set
+        )
 
         if not containment.allowed:
             refusals.append(

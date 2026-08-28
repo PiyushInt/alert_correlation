@@ -35,6 +35,21 @@ class MetricsRegistry:
                 "Total times containment refused a merge",
                 labelnames=["reason"],
             ),
+            "ace_incidents_split_total": Counter(
+                "ace_incidents_split_total",
+                "Total number of incidents partitioned via split operation",
+            ),
+            "ace_incident_feedback_total": Counter(
+                "ace_incident_feedback_total",
+                "Total operator feedback submissions",
+                labelnames=["verdict"],
+            ),
+            "ace_signal_disagreement_total": Counter(
+                "ace_signal_disagreement_total",
+                "Feedback instances marking 'wrong_group', tracked by the signal "
+                "that formed the grouping",
+                labelnames=["signal_name"],
+            ),
         }
 
         self.histograms: dict[str, Histogram] = {

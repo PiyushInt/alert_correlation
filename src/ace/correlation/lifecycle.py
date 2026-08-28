@@ -1,12 +1,15 @@
 import datetime
 import logging
+import uuid
 from collections import Counter
+from typing import Any
 
 from sqlalchemy.orm import Session
 
 from ace.db.models.alerts import Alert
-from ace.db.models.incidents import Incident, IncidentAlert
+from ace.db.models.incidents import Incident, IncidentAlert, IncidentSplit, SplitSuppression
 from ace.metrics import registry
+from ace.notification.dispatcher import dispatch_incident_event
 
 logger = logging.getLogger(__name__)
 
@@ -130,3 +133,150 @@ def auto_resolve_if_ready(
         return True
 
     return False
+
+
+def split_incident(
+    db: Session, r: Any, incident: Incident, partitions: list[list[str]], operator: str, reason: str
+) -> list[Incident]:
+    now = datetime.datetime.now(datetime.UTC)
+    incident.status = "split"
+    incident.closed_at = now
+
+    new_incidents = []
+    partition_fingerprints = []
+
+    for partition in partitions:
+        alert_ids = [uuid.UUID(a_id) for a_id in partition]
+        members = db.query(Alert).filter(Alert.id.in_(alert_ids)).all()
+        if not members:
+            continue
+
+        initial_alert = members[0]
+        new_inc = Incident(
+            title=generate_title(members),
+            status="open",
+            severity=initial_alert.severity,
+            opened_at=now,
+            alert_count=len(members),
+            source_tool_count=len({a.source_tool for a in members}),
+            diameter_hops=0,
+            capped=False,
+            split_from_incident_id=incident.id,
+        )
+        db.add(new_inc)
+        db.flush()
+        new_incidents.append(new_inc)
+
+        fingerprints = {a.fingerprint for a in members}
+        partition_fingerprints.append((new_inc.id, fingerprints))
+
+        for alert in members:
+            # We don't update alert.incident_id to preserve the ledger
+            incident_alert = IncidentAlert(
+                incident_id=new_inc.id,
+                alert_id=alert.id,
+                join_reason="Split partition",
+                join_score=1.0,
+                joined_at=now,
+            )
+            db.add(incident_alert)
+
+        from ace.correlation.window import add_open_incident
+
+        add_open_incident(r, new_inc.id)
+
+    # Enforce anti-affinity between partitions
+    for i, (inc_id_a, _fps_a) in enumerate(partition_fingerprints):
+        for j, (_inc_id_b, fps_b) in enumerate(partition_fingerprints):
+            if i == j:
+                continue
+            for fp in fps_b:
+                suppression = SplitSuppression(
+                    incident_id=inc_id_a, alert_fingerprint=fp, created_at=now
+                )
+                db.add(suppression)
+
+    split_record = IncidentSplit(
+        original_incident_id=incident.id,
+        resulting_incident_ids=[str(inc.id) for inc in new_incidents],
+        reason=reason,
+        operator=operator,
+        created_at=now,
+    )
+    db.add(split_record)
+    db.flush()
+
+    # Recompute root cause for new incidents
+    from ace.ranking.ranker import rank_root_cause_candidates
+
+    for inc in new_incidents:
+        rank_root_cause_candidates(db, inc, now)
+        dispatch_incident_event(db, inc, "split")
+
+    return new_incidents
+
+
+def merge_incidents(db: Session, r: Any, incident_a: Incident, incident_b: Incident) -> None:
+    now = datetime.datetime.now(datetime.UTC)
+
+    # Check for anti-affinity
+    members_a = db.query(IncidentAlert).filter(IncidentAlert.incident_id == incident_a.id).all()
+    members_b = db.query(IncidentAlert).filter(IncidentAlert.incident_id == incident_b.id).all()
+
+    # Since suppressions are keyed on (incident_id, fingerprint), we must check if incident_a
+    # has a suppression against any fingerprint in incident_b, or vice versa.
+    b_alert_ids = [m.alert_id for m in members_b]
+    b_alerts = db.query(Alert).filter(Alert.id.in_(b_alert_ids)).all()
+    b_fps = {a.fingerprint for a in b_alerts}
+
+    suppressions_a = (
+        db.query(SplitSuppression).filter(SplitSuppression.incident_id == incident_a.id).all()
+    )
+    for s in suppressions_a:
+        if s.alert_fingerprint in b_fps:
+            raise ValueError(
+                f"Merge refused: Incident {incident_a.id} has anti-affinity "
+                f"with fingerprint {s.alert_fingerprint}"
+            )
+
+    a_alert_ids = [m.alert_id for m in members_a]
+    a_alerts = db.query(Alert).filter(Alert.id.in_(a_alert_ids)).all()
+    a_fps = {a.fingerprint for a in a_alerts}
+
+    suppressions_b = (
+        db.query(SplitSuppression).filter(SplitSuppression.incident_id == incident_b.id).all()
+    )
+    for s in suppressions_b:
+        if s.alert_fingerprint in a_fps:
+            raise ValueError(
+                f"Merge refused: Incident {incident_b.id} has anti-affinity "
+                f"with fingerprint {s.alert_fingerprint}"
+            )
+
+    # Proceed with merge
+    incident_b.status = "merged"
+    incident_b.closed_at = now
+
+    for alert in b_alerts:
+        incident_alert = IncidentAlert(
+            incident_id=incident_a.id,
+            alert_id=alert.id,
+            join_reason="Manual operator merge",
+            join_score=1.0,
+            joined_at=now,
+        )
+        db.add(incident_alert)
+        a_alerts.append(alert)
+
+    incident_a.alert_count = len(a_alerts)
+    incident_a.source_tool_count = len({a.source_tool for a in a_alerts})
+    incident_a.title = generate_title(a_alerts)
+
+    from ace.correlation.window import remove_open_incident
+
+    remove_open_incident(r, incident_b.id)
+
+    from ace.ranking.ranker import rank_root_cause_candidates
+
+    rank_root_cause_candidates(db, incident_a, now)
+    dispatch_incident_event(db, incident_a, "escalation")

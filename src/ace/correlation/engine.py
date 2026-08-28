@@ -113,7 +113,24 @@ def process_alert_correlation(db: Session, r: redis.Redis, alert: Alert) -> None
     )
     signals = get_active_signals()
 
-    decision = make_decision(alert, candidate_incidents, signals, context)
+    from ace.db.models.incidents import SplitSuppression
+
+    suppressed_fingerprints: dict[uuid.UUID, set[str]] = {}
+    if candidate_incidents:
+        inc_ids = [inc.id for inc, _ in candidate_incidents]
+        suppressions = (
+            db.query(SplitSuppression).filter(SplitSuppression.incident_id.in_(inc_ids)).all()
+        )
+        for s in suppressions:
+            suppressed_fingerprints.setdefault(s.incident_id, set()).add(s.alert_fingerprint)
+
+    decision = make_decision(
+        alert,
+        candidate_incidents,
+        signals,
+        context,
+        suppressed_fingerprints=suppressed_fingerprints,
+    )
 
     # Log all containments that were refused
     for refusal in decision.refusals:
@@ -174,7 +191,7 @@ def process_alert_correlation(db: Session, r: redis.Redis, alert: Alert) -> None
                 f"from the window."
             )
         else:
-            inc_ids = [str(inc.id) for inc, _ in candidate_incidents]
+            inc_ids = [inc.id for inc, _ in candidate_incidents]
             logger.info(
                 f"Alert {alert.id} opened a new Incident. Reason: Candidates existed and every "
                 f"one was refused (evaluated {len(candidate_incidents)} candidates: {inc_ids})."

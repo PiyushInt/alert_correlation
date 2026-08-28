@@ -1,0 +1,8 @@
+{
+  "title": "Incident affecting unknown",
+  "status": "open",
+  "severity": "high",
+  "opened_at": "2026-08-28T10:09:22.344910+00:00",
+  "closed_at": null,
+  "alert_count": 1
+}

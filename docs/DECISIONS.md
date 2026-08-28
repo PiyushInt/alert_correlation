@@ -231,3 +231,8 @@ With the previous combination rule of summing unweighted scores against what was
 ### 2026-08-28 - Root Cause Ranking as a Timing Heuristic (Phase 10)
 **Decision:** With the `self` direction base score at 2.0 and the `earliest-alert` bonus at 5.0, ranking among `self`-only candidates is determined entirely by alert timing. 
 **Reason:** Every incident currently in the estate is self-only, so the graph-based ranking path is implemented but unexercised on real data. It is exercised only by the synthetic-graph unit test. Phase 13 must not present ranking as validated.
+
+### Phase 11: Incident Splitting and Anti-Affinity
+- **Anti-Affinity Guarantee**: Splitting an incident creates a durable suppression record keyed on `(incident_id, alert_fingerprint)`. This deliberately suppresses not just the exact alert instance, but any repeat occurrences or identical distinct alerts firing from the same rule on the same target. When an operator splits an incident, they are asserting a partition between these alert types for the duration of the current fault.
+- **Architectural Placement**: Suppression is enforced natively within `check_containment` purely by matching the candidate alert's fingerprint against a `suppressed_fingerprints` list passed down from `engine.py`. This ensures no pairwise alert IDs are used in `containment.py`, preserving the centroid-based no-transitivity rule established in Phase 7.
+- **Ledger Immutability**: `alerts.incident_id` is never mutated during a split. `incident_alerts` functions strictly as the append-only source of truth for an alert's current active incident membership.
