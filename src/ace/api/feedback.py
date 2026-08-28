@@ -1,5 +1,5 @@
+import datetime
 import uuid
-from datetime import datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends
@@ -31,7 +31,7 @@ def submit_feedback(
         verdict=data.verdict,
         operator=data.operator,
         note=data.note,
-        created_at=datetime.utcnow(),
+        created_at=datetime.datetime.now(datetime.UTC),
     )
     db.add(feedback)
     from ace.metrics import registry

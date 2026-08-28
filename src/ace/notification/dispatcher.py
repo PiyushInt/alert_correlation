@@ -47,5 +47,3 @@ def dispatch_incident_event(db: Session, incident: Incident, event_type: str) ->
         sync_incident(db, incident)
     except Exception as e:
         logger.exception(f"ITSM sync failed for incident {incident.id}: {e}")
-
-    db.commit()

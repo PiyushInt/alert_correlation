@@ -31,7 +31,7 @@ to do better; if so, say so rather than forcing the number.
 ## 6. Ledger contamination — OPEN
 The alerts table mixes real fault alerts, 12 constructed rows (source_tool='constructed'),
 and older hand-posted test rows. Not fixable by editing — the ledger is append-only.
-This contamination affects headline metrics: incident 991b1804 (the only three-tool incident, used for Phase 10 ranking demonstration) includes two `constructed` alerts (`0bb3e917-0a23-404c-b838-2b096cb6b551` and `c39d8bcf-3681-448d-89a6-cfbbf0fe1b11`). Its multi-tool status is partly fabricated.
+This contamination affects headline metrics: incident 991b1804 (the only three-tool incident, used for Phase 10 ranking demonstration) includes two `constructed` alerts (`0bb3e917-0a23-404c-b838-2b096cb6b551` and `c39d8bcf-3681-448d-89a6-cfbbf0fe1b11`). Its source_tool_count=3 counted a synthetic row as a monitoring tool.
 Phase 12 needs a clean run from fault injection only.
 
 ## 7. Component-count ambiguity — OPEN

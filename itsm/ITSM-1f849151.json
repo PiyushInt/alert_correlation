@@ -1,8 +1,0 @@
-{
-  "title": "Test Incident",
-  "status": "open",
-  "severity": "high",
-  "opened_at": "2026-08-28T10:08:27.763247+00:00",
-  "closed_at": null,
-  "alert_count": 1
-}

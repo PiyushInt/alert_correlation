@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from ace.correlation.lifecycle import merge_incidents, split_incident
 from ace.db.models.alerts import Alert
+from ace.db.models.components import Component
 from ace.db.models.incidents import Incident, IncidentAlert, SplitSuppression
 
 
@@ -36,6 +37,18 @@ def test_split_incident_and_anti_affinity(db_session: Session):
         capped=False,
     )
     db_session.add(incident)
+
+    comp = Component(
+        id=uuid.uuid4(),
+        canonical_name="test-component",
+        type="service",
+        environment="prod",
+        tenant="t1",
+        service_tier="tier1",
+        first_seen=datetime.datetime.now(datetime.UTC),
+        last_seen=datetime.datetime.now(datetime.UTC),
+    )
+    db_session.add(comp)
     db_session.flush()
 
     alert1 = Alert(
@@ -48,7 +61,8 @@ def test_split_incident_and_anti_affinity(db_session: Session):
         source_tool="prometheus",
         status="firing",
         severity="high",
-        component_unresolved=True,
+        component_unresolved=False,
+        component_id=comp.id,
         received_at=datetime.datetime.now(datetime.UTC),
     )
     alert2 = Alert(
@@ -61,7 +75,8 @@ def test_split_incident_and_anti_affinity(db_session: Session):
         source_tool="zabbix",
         status="firing",
         severity="high",
-        component_unresolved=True,
+        component_unresolved=False,
+        component_id=comp.id,
         received_at=datetime.datetime.now(datetime.UTC),
     )
     db_session.add_all([alert1, alert2])
