@@ -18,6 +18,7 @@ def test_ranker_no_members():
 
     db.add.assert_not_called()
     db.commit.assert_not_called()
+    assert incident.root_cause_component_id is None
 
 
 def test_ranker_timing_and_direction():
@@ -87,6 +88,8 @@ def test_ranker_timing_and_direction():
         assert added_candidates[0].uncertain is True  # self, 0 hops
         assert added_candidates[1].uncertain is True  # self, 0 hops
 
+        assert incident.root_cause_component_id == comp1
+
 
 def test_ranker_graph_traversal_and_uncertainty():
     db = MagicMock()
@@ -148,3 +151,5 @@ def test_ranker_graph_traversal_and_uncertainty():
 
         assert added_candidates[0].uncertain is False  # Traversed (inbound, 1 hop)
         assert added_candidates[1].uncertain is True  # self, 0 hops
+
+        assert incident.root_cause_component_id == comp3

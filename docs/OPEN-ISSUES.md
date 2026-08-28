@@ -72,9 +72,12 @@ Alert ID: `161b32fa-5d01-4a65-a9f2-d3d366e8108e`
 `signal_scores`: `{"text_similarity": 0.9, "dependency_proximity": 0.8}`
 It is identifiable by its shape (two keys only, missing `same_component` and `cooccurrence`) and its round values. Any computation over `signal_scores` must explicitly exclude this row.
 
-## 14. Ranker output is not wired to incidents.root_cause_component_id — OPEN
+## 14. Ranker output is not wired to incidents.root_cause_component_id — CLOSED
 The root cause ranker built in Phase 10 correctly computes and writes candidates to the `root_cause_candidates` table. However, it never updates the parent `Incident` record's `root_cause_component_id` column to reflect the top-ranked candidate. 
-Evidence: During evaluation replays, incidents generated correctly received 8 candidates each in the `ace_db_eval` database's `root_cause_candidates` table, but querying the resulting incident always returns `root_cause_component_id` as null. As a result, no consumer can read the ranking directly from the incident. This is a pipeline behavior defect and will be addressed in a separate change outside of Phase 12a.
+Evidence: During evaluation replays, incidents generated correctly received 8 candidates each in the `ace_db_eval` database's `root_cause_candidates` table, but querying the resulting incident always returns `root_cause_component_id` as null. As a result, no consumer can read the ranking directly from the incident. 
+
+**Resolution (fix/ranker-writeback):** Fixed in the Phase 12a runner fixes. The `rank_root_cause_candidates` function now wires the rank-1 candidate back to `incident.root_cause_component_id` in the same transaction. 
+**Note:** Existing incidents are not backfilled. The field will populate only for incidents ranked after this change.
 
 ## 15. Resolution fails if fault duration exceeds DEDUP_WINDOW — OPEN
 Because resolution matching in `src/ace/pipeline/dedup.py` relies exclusively on the Redis dedup cache (`r.get(dedup_key)`) to map a resolution alert to its firing original, any fault that lasts longer than `DEDUP_WINDOW` will never resolve its incident. The firing alert's dedup key will expire, and when the resolution alert finally arrives, the pipeline cannot link it, leaving the incident stuck in the `open` state indefinitely. The default window is 3600s, meaning any production fault lasting over an hour (e.g., a slow-burn disk fill) will trigger this defect.

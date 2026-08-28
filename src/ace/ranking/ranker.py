@@ -128,6 +128,10 @@ def rank_root_cause_candidates(
             )
             db.add(candidate)
 
+            # Wire the top-ranked candidate back to the parent incident
+            if rank_idx == 0:
+                incident.root_cause_component_id = comp
+
         db.commit()
 
     except Exception as e:
