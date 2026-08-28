@@ -12,14 +12,18 @@ from ace.dependency.reachability import reachability
 logger = logging.getLogger(__name__)
 
 
-def rank_root_cause_candidates(db: Session, incident: Incident, current_time: datetime.datetime) -> None:
+def rank_root_cause_candidates(
+    db: Session, incident: Incident, current_time: datetime.datetime
+) -> None:
     """
     Ranks root cause candidates for an incident.
     Persists them to root_cause_candidates table.
     """
     try:
         # Get all members of the incident
-        member_links = db.query(IncidentAlert).filter(IncidentAlert.incident_id == incident.id).all()
+        member_links = (
+            db.query(IncidentAlert).filter(IncidentAlert.incident_id == incident.id).all()
+        )
         member_ids = [link.alert_id for link in member_links]
         members = db.query(Alert).filter(Alert.id.in_(member_ids)).all()
 
@@ -39,7 +43,10 @@ def rank_root_cause_candidates(db: Session, incident: Incident, current_time: da
             if not alert.component_id:
                 continue
             time_val = alert.starts_at or alert.received_at
-            if alert.component_id not in component_earliest_times or time_val < component_earliest_times[alert.component_id]:
+            if (
+                alert.component_id not in component_earliest_times
+                or time_val < component_earliest_times[alert.component_id]
+            ):
                 component_earliest_times[alert.component_id] = time_val
 
         candidate_components = set(centroid_component_ids)
@@ -61,16 +68,13 @@ def rank_root_cause_candidates(db: Session, incident: Incident, current_time: da
                         best_direction = direction
 
             if best_hops <= max_hops:
-                candidates_info[comp] = {
-                    "hops": best_hops,
-                    "direction": best_direction
-                }
+                candidates_info[comp] = {"hops": best_hops, "direction": best_direction}
 
         # Score the candidates
         scored_candidates = []
         for comp, info in candidates_info.items():
             score = 0.0
-            
+
             # Base score based on direction (comp relative to centroid)
             # inbound: Centroid depends on this component (upstream). Very likely root cause.
             # outbound: This component depends on centroid (downstream). Likely a symptom.
@@ -83,7 +87,7 @@ def rank_root_cause_candidates(db: Session, incident: Incident, current_time: da
                 score += 2.0
             else:
                 score += 1.0
-                
+
             # Penalize by hops
             score -= info["hops"] * 2.0
 
@@ -98,18 +102,18 @@ def rank_root_cause_candidates(db: Session, incident: Incident, current_time: da
 
             # 'uncertain' is True if there is no traversal evidence supporting the rank
             # (i.e. the candidate is just a 'self' centroid member with 0 hops, not discovered via edges)
-            uncertain = (info["direction"] == "self" or info["hops"] == 0)
+            uncertain = info["direction"] == "self" or info["hops"] == 0
 
             evidence = {
                 "hops": info["hops"],
                 "direction": info["direction"],
                 "fired_alert": comp in component_earliest_times,
-                "is_earliest_alert": is_earliest
+                "is_earliest_alert": is_earliest,
             }
             scored_candidates.append((score, comp, evidence, uncertain))
 
         scored_candidates.sort(key=lambda x: x[0], reverse=True)
-        
+
         for rank_idx, (score, comp, evidence, uncertain) in enumerate(scored_candidates):
             candidate = RootCauseCandidate(
                 incident_id=incident.id,
@@ -118,10 +122,10 @@ def rank_root_cause_candidates(db: Session, incident: Incident, current_time: da
                 score=score,
                 evidence=evidence,
                 uncertain=uncertain,
-                computed_at=current_time
+                computed_at=current_time,
             )
             db.add(candidate)
-            
+
         db.commit()
 
     except Exception as e:

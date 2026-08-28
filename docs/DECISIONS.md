@@ -224,5 +224,9 @@ With the current combination rule of summing scores against a static 0.5 thresho
 **Reason:** Collinearity between signals double-counts the same phenomenon. If an alert occurs on the exact same component as the incident's centroid, the `same_component` signal already scores it 1.0 (weighted to 1.0). Previously, `dependency_proximity` also hardcoded a 1.0 score for `self`, resulting in a duplicate weighted boost (0.6) for the exact same underlying fact.
 
 ### 2026-08-28 - Root Cause Candidate 'uncertain' Flag (Phase 10)
-**Decision:** The `uncertain` flag on a `RootCauseCandidate` is set to `True` whenever the total number of edges in the dependency graph is <= 10.
+**Decision:** The `uncertain` flag on a `RootCauseCandidate` is set to `True` when there is no traversal evidence supporting the candidate's rank (i.e. `direction == "self"` or `hops == 0`).
 **Reason:** The estate's topology is extremely sparse (currently 5 edges). When the graph lacks comprehensive observability edges, distance-based ranking is inherently unreliable because we cannot differentiate between "this component actually originated the failure but didn't fire an alert" and "we just don't have edges to the true root cause." Setting `uncertain = True` makes this limitation visible to operators rather than hiding behind a deceptively confident rank.
+
+### 2026-08-28 - Root Cause Ranking as a Timing Heuristic (Phase 10)
+**Decision:** With the `self` direction base score at 2.0 and the `earliest-alert` bonus at 5.0, ranking among `self`-only candidates is determined entirely by alert timing. 
+**Reason:** Every incident generated on the current estate consists solely of `self`-only components because of the lack of observable edges. Therefore, the ranker currently functions in practice strictly as a timing heuristic on this estate. The graph-based ranking algorithm is implemented and will correctly rank an upstream topological cause (`inbound` scores 20.0) ahead of a downstream or isolated alert, but this code path remains unexercised on the current data.

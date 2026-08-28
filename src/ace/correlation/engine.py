@@ -195,6 +195,7 @@ def process_alert_correlation(db: Session, r: redis.Redis, alert: Alert) -> None
     target_incident = decision.incident if decision.incident else incident
     try:
         from ace.ranking.ranker import rank_root_cause_candidates
+
         rank_root_cause_candidates(db, target_incident, datetime.datetime.now(datetime.UTC))
     except Exception as e:
         # Should be handled in rank_root_cause_candidates, but just in case
