@@ -10,6 +10,7 @@ class Settings(BaseSettings):
 
     # Database (Synchronous psycopg)
     DATABASE_URL: str = "postgresql+psycopg://ace_user:ace_password@localhost:5433/ace_db"
+    EVAL_DATABASE_URL: str = "postgresql+psycopg://ace_user:ace_password@localhost:5433/ace_db_eval"
 
     # Redis
     REDIS_URL: str = "redis://localhost:6380/0"

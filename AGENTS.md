@@ -281,17 +281,19 @@ Recorded in `docs/CONTEXT.md`. Summarised here because they shape what any phase
 
 ## Database access
 
-Two connection strings exist. Use the correct one.
+Four connection strings exist across two databases (`ace_db` for development, `ace_db_eval` for Phase 12 evaluation). Use the correct one.
 
 Investigation, verification, and any read of the ledger:
   postgresql://ace_readonly:ace_readonly@localhost:5433/ace_db
+  postgresql://ace_readonly:ace_readonly@localhost:5433/ace_db_eval
 
 This role has SELECT only. Writes fail at the database with a permission error.
 
 Application runtime and Alembic migrations only:
   postgresql+psycopg://ace_user:ace_password@localhost:5433/ace_db
+  postgresql+psycopg://ace_user:ace_password@localhost:5433/ace_db_eval
 
-Never use the ace_user DSN for investigation, verification, or ad-hoc scripts. If a task appears to require a write outside a migration, stop and ask.
+Never use the `ace_user` DSN for investigation, verification, or ad-hoc scripts on either database. If a task appears to require a write outside a migration, stop and ask. The strict safety rules apply equally to `ace_db_eval`.
 
 ## What counts as evidence
 - Evidence is output produced by a command run in THIS task, pasted raw.
