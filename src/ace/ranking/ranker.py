@@ -1,5 +1,6 @@
 import datetime
 import logging
+import uuid
 
 from sqlalchemy.orm import Session
 
@@ -38,7 +39,7 @@ def rank_root_cause_candidates(
         max_hops = settings.MAX_INCIDENT_HOPS
 
         # Timing analysis: find the earliest alert for each component involved in the incident
-        component_earliest_times = {}
+        component_earliest_times: dict[uuid.UUID, datetime.datetime] = {}
         for alert in members:
             if not alert.component_id:
                 continue
@@ -54,7 +55,7 @@ def rank_root_cause_candidates(
             neighbors = graph_instance.neighbours_within(target_id, max_hops, "both")
             candidate_components.update(neighbors)
 
-        candidates_info = {}
+        candidates_info: dict[uuid.UUID, tuple[float, str | None]] = {}
         for comp in candidate_components:
             best_hops = float("inf")
             best_direction = None
@@ -64,32 +65,32 @@ def rank_root_cause_candidates(
                 if res is not None:
                     hops, direction, path = res
                     if hops < best_hops:
-                        best_hops = hops
+                        best_hops = float(hops)
                         best_direction = direction
 
             if best_hops <= max_hops:
-                candidates_info[comp] = {"hops": best_hops, "direction": best_direction}
+                candidates_info[comp] = (best_hops, best_direction)
 
         # Score the candidates
         scored_candidates = []
-        for comp, info in candidates_info.items():
+        for comp, (cand_hops, cand_direction) in candidates_info.items():
             score = 0.0
 
             # Base score based on direction (comp relative to centroid)
             # inbound: Centroid depends on this component (upstream). Very likely root cause.
             # outbound: This component depends on centroid (downstream). Likely a symptom.
             # self: No topological traversal, just a component that was in the incident.
-            if info["direction"] == "inbound":
+            if cand_direction == "inbound":
                 score += 20.0
-            elif info["direction"] == "outbound":
+            elif cand_direction == "outbound":
                 score += 5.0
-            elif info["direction"] == "self":
+            elif cand_direction == "self":
                 score += 2.0
             else:
                 score += 1.0
 
             # Penalize by hops
-            score -= info["hops"] * 2.0
+            score -= cand_hops * 2.0
 
             is_earliest = False
             if component_earliest_times:
@@ -103,11 +104,11 @@ def rank_root_cause_candidates(
             # 'uncertain' is True if there is no traversal evidence supporting the rank
             # (i.e. the candidate is just a 'self' centroid member with 0 hops,
             # not discovered via edges)
-            uncertain = info["direction"] == "self" or info["hops"] == 0
+            uncertain = cand_direction == "self" or cand_hops == 0
 
             evidence = {
-                "hops": info["hops"],
-                "direction": info["direction"],
+                "hops": cand_hops,
+                "direction": cand_direction,
                 "fired_alert": comp in component_earliest_times,
                 "is_earliest_alert": is_earliest,
             }
