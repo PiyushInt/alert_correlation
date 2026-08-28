@@ -246,3 +246,8 @@ Of the 5 genuine rows, 4 show `dependency_proximity: 1.0` and predate the Phase 
 ### 2026-08-28 - Render Notification API Endpoint
 **Decision:** The temporary `GET /incidents/{id}/render` endpoint added for demonstration purposes has been removed and will not stay in the API.
 **Reason:** The raw text rendered notification is intended strictly for the outbound dispatch path (email, ITSM). Exposing it via the API couples the API to specific sender formatting and encourages consumers to parse formatted text rather than consuming the structured JSON incident data.
+
+### 2026-08-29: First observed cascade, correctly refused
+A disk fill on `/mnt/valkey-data` caused a Blackbox `CartEndpointDown` on `cart` — the first genuine cascade observed on this estate. The correlation engine refused to group it. Measured: 3 hops (`cart` to `valkey` to `docker-host-01` to `/mnt/valkey-data`), `dependency_proximity` raw 0.25 after two applications of the 0.5 decay factor, weighted 0.15; `text_similarity` raw 0.855, weighted 0.4275; `same_component` 0.0; `cooccurrence` 0.0; total 0.5775 against a threshold of 1.0. Signal 2 fired and correctly identified the outbound direction. Hop decay reduced its contribution below the merging threshold.
+
+This is designed behaviour, not a defect. Phase 13 must report it: the only real cascade this estate produced was not grouped, because a three-hop causal chain scores below the configured threshold.

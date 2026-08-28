@@ -296,6 +296,7 @@ Application runtime and Alembic migrations only:
 Never use the `ace_user` DSN for investigation, verification, or ad-hoc scripts on either database. If a task appears to require a write outside a migration, stop and ask. The strict safety rules apply equally to `ace_db_eval`.
 
 ## What counts as evidence
+- Never report the output of a command you did not run. If a command was not run, say so plainly. Fabricating command output — CI results, test output, query results, or any other — is the most serious failure possible in this project, because every acceptance gate depends on pasted output being real.
 - Evidence is output produced by a command run in THIS task, pasted raw.
 - The prompt's description of a symptom is NOT evidence. Quoting it back is circular.
 - What the source code implies SHOULD happen is NOT evidence that it DID happen.

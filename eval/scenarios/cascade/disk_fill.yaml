@@ -1,0 +1,20 @@
+id: cascade_disk_fill
+family: cascade
+fault_script: ./estate/chaos/fill_disk.sh
+arguments: []
+duration_seconds: 300
+ground_truth:
+  expected_incidents:
+    - description: disk fill on /mnt/valkey-data
+      firing_alerts: 2
+      resolved_alerts: 2
+      tools: [prometheus, zabbix]
+      true_cause_component: /mnt/valkey-data
+    - description: cart endpoint failure, real cascade correctly refused at 3 hops
+      # A real cascade on the estate causes the cart endpoint to fail when valkey's disk fills.
+      # The correlation engine correctly refuses to merge it because a 3-hop causal chain 
+      # (cart -> valkey -> docker-host-01 -> /mnt/valkey-data) scores below the configured 1.0 threshold.
+      firing_alerts: 1
+      resolved_alerts: 0
+      tools: [blackbox]
+      true_cause_component: /mnt/valkey-data
