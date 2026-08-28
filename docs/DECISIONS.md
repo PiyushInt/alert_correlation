@@ -229,4 +229,4 @@ With the current combination rule of summing scores against a static 0.5 thresho
 
 ### 2026-08-28 - Root Cause Ranking as a Timing Heuristic (Phase 10)
 **Decision:** With the `self` direction base score at 2.0 and the `earliest-alert` bonus at 5.0, ranking among `self`-only candidates is determined entirely by alert timing. 
-**Reason:** Every incident generated on the current estate consists solely of `self`-only components because of the lack of observable edges. Therefore, the ranker currently functions in practice strictly as a timing heuristic on this estate. The graph-based ranking algorithm is implemented and will correctly rank an upstream topological cause (`inbound` scores 20.0) ahead of a downstream or isolated alert, but this code path remains unexercised on the current data.
+**Reason:** Every incident currently in the estate is self-only, so the graph-based ranking path is implemented but unexercised on real data. It is exercised only by the synthetic-graph unit test. Phase 13 must not present ranking as validated.
