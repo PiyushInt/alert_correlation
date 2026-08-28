@@ -196,10 +196,11 @@ The original `docs/ESTATE.md` table correctly identified 3 rows (valkey, cart, v
 ### 2026-08-27 - Phase 9 Measurements & Phase 10 Implications
 **Measurements:**
 - `text_similarity` scored **0.525** between a Blackbox and a Prometheus alert for the same fault (`kill_service`) on the same component (`cart`). This is the observed value on this estate from a single realistic run.
+- On the cart alert pair, `text_similarity` rose from **0.5806** to **0.855** after the Blackbox rule annotation was corrected from "Frontend is down (synthetic check)" to "Cart is down (synthetic check)" (open issue 11). This is the only measured instance in the project of an estate configuration change moving a signal score, and it is evidence that `text_similarity` is sensitive to alert wording rather than to fault identity — relevant to Phase 13.
 - `cooccurrence` is **UNMEASURED**, not zero. The `alert_type_stats` table holds 6 rows derived from a contaminated ledger containing constructed alerts, rendering historical correlations unmeasurable on this dataset.
 
 **Implication for Phase 10:**
-With the current combination rule of summing scores against a static 0.5 threshold, a `text_similarity` of 0.525 alone would successfully merge two alerts that have NO component match and NO dependency proximity. This definitively quantifies the over-merge risk and proves that summing independent signals against a low threshold is fundamentally unsafe without a more rigorous combination logic (to be addressed in Phase 10).
+With the previous combination rule of summing scores against a static 0.5 threshold, a `text_similarity` of 0.525 alone successfully merged two alerts that have NO component match and NO dependency proximity. This definitively quantified the over-merge risk and proved that summing independent signals against a low threshold was fundamentally unsafe without a more rigorous combination logic (addressed in Phase 10 by raising the threshold to 1.0 and adding weights).
 
 ### 2026-08-28 - Zabbix Recovery Events (Ingestion)
 **Decision:** Zabbix adapter now parses the `status` field from incoming payloads. `PROBLEM` maps to `firing`, and `RESOLVED` maps to `resolved`. If the `status` field is completely absent (e.g., from older ledger payloads or malformed requests), it defaults to `firing` and logs a warning.
