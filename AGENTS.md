@@ -15,7 +15,7 @@
 - Do not refactor, rename, or "improve" code from earlier phases unless asked.
 - Ambiguity: ask one question rather than guess.
 - No mock data or stubbed returns in a component being marked complete.
-- Run `./scripts/check.sh` before declaring a phase finished and paste the real output.
+- Acceptance for any phase is ./scripts/check.sh printing "All checks passed!", pasted in full. Not pytest alone. CI evidence must be gh run view <id> --json conclusion,headSha, and the headSha must match HEAD.
 - NEVER run a hold-out scenario (`eval/holdout/`). Running one during development destroys
   the evidence it exists to provide.
 - Every dependency goes into pyproject.toml in the SAME task that introduces
@@ -24,7 +24,7 @@
   local checks masked a red pipeline because of this.
 - Before fixing a CI failure, run `gh run view --log-failed` and read the
   actual error. Runs #10 and #12 were fixes pushed without reading the log;
-  both introduced new failures. Diagnose, then change.
+  both introduced new failures. Diagnose, then change. Before pushing a fix for a CI failure, read the failure log and name the failing step. Do not push a speculative fix.
 - A phase is not complete until CI is green on main. Phases 6 and 7 were
   tagged against a red pipeline.
 
@@ -278,6 +278,20 @@ Recorded in `docs/CONTEXT.md`. Summarised here because they shape what any phase
   Any decrease is a task failure regardless of the finding.
 - The alerts table is an immutable ledger. Investigations read it. They never reset it.
 - No ad-hoc scripts connecting to the live database outside the test harness.
+
+## Database access
+
+Two connection strings exist. Use the correct one.
+
+Investigation, verification, and any read of the ledger:
+  postgresql://ace_readonly:ace_readonly@localhost:5433/ace_db
+
+This role has SELECT only. Writes fail at the database with a permission error.
+
+Application runtime and Alembic migrations only:
+  postgresql+psycopg://ace_user:ace_password@localhost:5433/ace_db
+
+Never use the ace_user DSN for investigation, verification, or ad-hoc scripts. If a task appears to require a write outside a migration, stop and ask.
 
 ## What counts as evidence
 - Evidence is output produced by a command run in THIS task, pasted raw.
