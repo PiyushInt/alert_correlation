@@ -230,7 +230,7 @@ With the previous combination rule of summing unweighted scores against what was
 
 ### 2026-08-28 - Root Cause Ranking as a Timing Heuristic (Phase 10)
 **Decision:** With the `self` direction base score at 2.0 and the `earliest-alert` bonus at 5.0, ranking among `self`-only candidates is determined entirely by alert timing. 
-**Reason:** Every incident currently in the estate was initially believed to be self-only, making the graph-based ranking path unexercised on real data. However, **observation of incident 1c476517** revealed a root cause candidate with `direction: outbound` and `hops: 1.0` (Score: 3.00). This proves the graph traversal and ranking logic functions on real estate data, though Phase 13 must still validate the tuning.
+**Reason:** Every naturally formed incident in the estate is self-only, so ranking is determined by timing; a single outbound candidate at hops 1.0 was observed on 1c476517, which is a script-created partition of a partly-synthetic incident, so the graph path has executed on real data once but under conditions that do not generalise. Phase 13 must not present ranking as validated.
 
 ### Phase 11: Incident Splitting and Anti-Affinity
 - **Anti-Affinity Guarantee**: Splitting an incident creates a durable suppression record keyed on `(incident_id, alert_fingerprint)`. This deliberately suppresses not just the exact alert instance, but any repeat occurrences or identical distinct alerts firing from the same rule on the same target. When an operator splits an incident, they are asserting a partition between these alert types for the duration of the current fault.
@@ -239,7 +239,7 @@ With the previous combination rule of summing unweighted scores against what was
 
 ### 2026-08-28 - Disagreement Metric (Phase 11)
 **Decision:** The metric `ace_signal_disagreement_total` is implemented but is currently unmeasurable on the live estate.
-**Reason:** The disagreement rate depends on operator feedback marking an incident as `wrong_group`, tracked back to the signal that formed the grouping. This requires `incident_alerts.signal_scores` to be populated. The corpus figure to use everywhere is 5 genuine rows across 4 incidents, plus 1 fabricated row excluded. It is mathematically impossible to meaningfully compute or track a disagreement rate across the estate until new data flows through the pipeline and statistically significant signal scores are persisted.
+**Reason:** The disagreement rate depends on operator feedback marking an incident as `wrong_group`, tracked back to the signal that formed the grouping. This requires `incident_alerts.signal_scores` to be populated. `incident_alerts` contains 5 genuine `signal_scores` rows across 4 incidents, plus 1 fabricated row (issue 13) that must be excluded. It is mathematically impossible to meaningfully compute or track a disagreement rate across the estate until new data flows through the pipeline and statistically significant signal scores are persisted.
 
 Of the 5 genuine rows, 4 show `dependency_proximity: 1.0` and predate the Phase 10 distance-0 fix; the fifth (92536534, incident 8c1c41bd) shows 0.0 and is the fix in production. The before and after are both durable in the ledger.
 
