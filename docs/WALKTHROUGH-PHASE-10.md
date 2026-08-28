@@ -38,14 +38,14 @@ The `rank_root_cause_candidates` algorithm:
 Running the ranker against incident `991b1804-d7f2-45c4-af6e-6f6a400d180e` yields:
 ```
 Candidates for incident 991b1804-d7f2-45c4-af6e-6f6a400d180e:
-Rank 1: component_id=9171e0ed-4870-4845-866e-fcc57d0a8100 score=15.0 uncertain=True evidence={'hops': 0, 'direction': 'self', 'fired_alert': True, 'is_earliest_alert': True}
-Rank 2: component_id=f134e20d-9752-4eac-bab8-b68a553f6ecd score=10.0 uncertain=True evidence={'hops': 0, 'direction': 'self', 'fired_alert': True, 'is_earliest_alert': False}
+Rank 1: component_id=9171e0ed-4870-4845-866e-fcc57d0a8100 score=9.0 uncertain=True evidence={'hops': 0.0, 'direction': 'self', 'fired_alert': True, 'is_earliest_alert': True}
+Rank 2: component_id=f134e20d-9752-4eac-bab8-b68a553f6ecd score=4.0 uncertain=True evidence={'hops': 0.0, 'direction': 'self', 'fired_alert': True, 'is_earliest_alert': False}
 ```
 
 ### Acceptance Criterion 4: Explanation
 The prompt asks to explicitly show a case where the top-ranked candidate component is NOT the earliest-arriving alert component, or explain why the estate cannot produce one.
 
-**Explanation:** The estate cannot produce such a case because the topology map is fundamentally too sparse. The ranker logic explicitly ranks an upstream topological cause above a downstream symptomatic alert (10.0 base score vs 5.0). However, the estate's dependency graph has only 5 total edges, none of which connect the specific faulting components in these dual-alert scenarios. Because the incident's component nodes are technically disconnected in the graph, the ranker calculates their distance as `0` (`self`) to their respective alerts. Without topological traversal linking them, the ranker must rely on the tie-breaker: the earliest arriving alert. Thus, the top-ranked candidate will always perfectly coincide with the earliest alert until the observability gap (graph edges) is addressed. This is explicitly surfaced by the `uncertain=True` flag in the candidate row.
+**Explanation:** The estate cannot produce such a case because the topology map is fundamentally too sparse. The ranker logic calculates their distance as `0` (`self`, base score 2.0) to their respective alerts. Without topological traversal linking them via an upstream connection (inbound base score 20.0), the ranker relies entirely on the tie-breakers: the "fired alert" bonus (2.0) and the "earliest alert" bonus (5.0). Because both fired alerts but only one was earliest, the scores split exactly by that 5.0 margin (9.0 vs 4.0). Thus, the top-ranked candidate will always perfectly coincide with the earliest alert until the observability gap (graph edges) is addressed. This is explicitly surfaced by the `uncertain=True` flag in the candidate row.
 
 ## 3. Documentation
 `docs/DECISIONS.md` has been updated to codify the `uncertain` flag logic and the collinearity fix.

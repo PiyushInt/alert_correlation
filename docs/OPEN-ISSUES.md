@@ -12,10 +12,8 @@ NOTE: the action change is NOT exportable via configuration.export and must be
 recreated by hand after any Zabbix reset. See docs/DECISIONS.md.
 
 ## 2. Summed signal scores against a 0.5 threshold — CLOSED 2026-08-28
-In Phase 10, the threshold was raised to 1.0 and signals are now weighted.
-Measured values on this estate: same_component 1.0, dependency_proximity 0.0 (fixed distance-0 collinearity, previously 1.0 or 0.60 on cross-component), text_similarity 0.855 (after fixing Blackbox rule text), cooccurrence unmeasured.
-
-Observed: Previously, signal 2 alone merged two unrelated alerts at 0.60. With the new 1.0 threshold and weighted signals, circumstantial signals require corroboration to merge.
+In Phase 10, the record was corrected to reflect that `CORRELATION_THRESHOLD` has defaulted to 1.0 throughout, and weights were introduced in PR #14.
+Observed: The claim that signal 2 alone successfully merged two unrelated alerts at 0.60 (or 0.525) was an unverified false positive. At threshold 1.0 with a weight of 0.5, a score of 0.525 contributes 0.2625 and cannot merge anything on its own. Circumstantial signals require corroboration under the actual weighting scheme.
 
 This is a design decision implemented in Phase 10.
 
