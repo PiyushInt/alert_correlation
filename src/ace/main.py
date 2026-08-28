@@ -59,6 +59,9 @@ def create_app() -> FastAPI:
     app.include_router(components_router, prefix="/components", tags=["components"])
     app.include_router(dependency_map_router, prefix="/dependencies", tags=["dependencies"])
     app.include_router(incidents_router, prefix="/incidents", tags=["incidents"])
+    from ace.api.feedback import router as feedback_router
+
+    app.include_router(feedback_router, tags=["feedback"])
     app.include_router(metrics_router, tags=["metrics"])
     app.include_router(otlp_router)  # mounted at /v1/traces natively
 

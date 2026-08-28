@@ -230,4 +230,19 @@ With the previous combination rule of summing unweighted scores against what was
 
 ### 2026-08-28 - Root Cause Ranking as a Timing Heuristic (Phase 10)
 **Decision:** With the `self` direction base score at 2.0 and the `earliest-alert` bonus at 5.0, ranking among `self`-only candidates is determined entirely by alert timing. 
-**Reason:** Every incident currently in the estate is self-only, so the graph-based ranking path is implemented but unexercised on real data. It is exercised only by the synthetic-graph unit test. Phase 13 must not present ranking as validated.
+**Reason:** Every naturally formed incident in the estate is self-only, so ranking is determined by timing; a single outbound candidate at hops 1.0 was observed on 1c476517, which is a script-created partition of a partly-synthetic incident, so the graph path has executed on real data once but under conditions that do not generalise. Phase 13 must not present ranking as validated.
+
+### Phase 11: Incident Splitting and Anti-Affinity
+- **Anti-Affinity Guarantee**: Splitting an incident creates a durable suppression record keyed on `(incident_id, alert_fingerprint)`. This deliberately suppresses not just the exact alert instance, but any repeat occurrences or identical distinct alerts firing from the same rule on the same target. When an operator splits an incident, they are asserting a partition between these alert types for the duration of the current fault.
+- **Architectural Placement**: Suppression is enforced natively within `check_containment` purely by matching the candidate alert's fingerprint against a `suppressed_fingerprints` list passed down from `engine.py`. This ensures no pairwise alert IDs are used in `containment.py`, preserving the centroid-based no-transitivity rule established in Phase 7.
+- **Ledger Immutability**: `alerts.incident_id` is never mutated during a split. `incident_alerts` functions strictly as the append-only source of truth for an alert's current active incident membership.
+
+### 2026-08-28 - Disagreement Metric (Phase 11)
+**Decision:** The metric `ace_signal_disagreement_total` is implemented but is currently unmeasurable on the live estate.
+**Reason:** The disagreement rate depends on operator feedback marking an incident as `wrong_group`, tracked back to the signal that formed the grouping. This requires `incident_alerts.signal_scores` to be populated. `incident_alerts` contains 5 genuine `signal_scores` rows across 4 incidents, plus 1 fabricated row (issue 13) that must be excluded. It is mathematically impossible to meaningfully compute or track a disagreement rate across the estate until new data flows through the pipeline and statistically significant signal scores are persisted.
+
+Of the 5 genuine rows, 4 show `dependency_proximity: 1.0` and predate the Phase 10 distance-0 fix; the fifth (92536534, incident 8c1c41bd) shows 0.0 and is the fix in production. The before and after are both durable in the ledger.
+
+### 2026-08-28 - Render Notification API Endpoint
+**Decision:** The temporary `GET /incidents/{id}/render` endpoint added for demonstration purposes has been removed and will not stay in the API.
+**Reason:** The raw text rendered notification is intended strictly for the outbound dispatch path (email, ITSM). Exposing it via the API couples the API to specific sender formatting and encourages consumers to parse formatted text rather than consuming the structured JSON incident data.

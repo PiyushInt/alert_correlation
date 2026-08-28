@@ -17,12 +17,20 @@ class GraphProtocol(Protocol):
 
 
 def check_containment(
-    alert: Alert, incident: Incident, incident_alerts: list[Alert], graph: GraphProtocol
+    alert: Alert,
+    incident: Incident,
+    incident_alerts: list[Alert],
+    graph: GraphProtocol,
+    suppressed_fingerprints: set[str] | None = None,
 ) -> ContainmentResult:
     """
     Evaluates whether an alert is allowed to join an incident based on containment rules.
     This function is PURE (no I/O, no random, no clocks).
     """
+    # 0. MANUAL SUPPRESSION (ANTI-AFFINITY)
+    if suppressed_fingerprints and alert.fingerprint in suppressed_fingerprints:
+        return ContainmentResult(False, "Split override: manual operator split")
+
     # 1. HARD PARTITIONS
     if alert.environment != incident_alerts[0].environment:
         return ContainmentResult(False, "Hard Partition: Environment mismatch")
