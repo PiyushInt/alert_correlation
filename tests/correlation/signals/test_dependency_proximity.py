@@ -132,3 +132,25 @@ def test_beyond_max_hops():
         assert result.score == 0.0
         assert not result.evidence["match"]
         assert result.evidence["reason"] == "path exceeds max hops"
+
+
+def test_distance_0_collinearity():
+    alert_comp = uuid.uuid4()
+    alert = Alert(component_id=alert_comp)
+    centroid = IncidentCentroid(component_ids={alert_comp})
+    context = MagicMock()
+    context.graph.get_edge_count.return_value = 5
+
+    with pytest.MonkeyPatch.context() as m:
+        from ace.correlation.signals import dependency_proximity
+
+        mock_reach = MagicMock()
+        mock_reach.get_shortest_path.return_value = (0, "self", [alert_comp])
+        m.setattr(dependency_proximity, "reachability", mock_reach)
+
+        signal = DependencyProximitySignal()
+        result = signal.score(alert, MagicMock(), centroid, context)
+
+        assert result.score == 0.0
+        assert not result.evidence["match"]
+        assert result.evidence["reason"] == "same component; deferred to same_component signal"

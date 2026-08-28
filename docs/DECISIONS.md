@@ -196,10 +196,11 @@ The original `docs/ESTATE.md` table correctly identified 3 rows (valkey, cart, v
 ### 2026-08-27 - Phase 9 Measurements & Phase 10 Implications
 **Measurements:**
 - `text_similarity` scored **0.525** between a Blackbox and a Prometheus alert for the same fault (`kill_service`) on the same component (`cart`). This is the observed value on this estate from a single realistic run.
+- On the cart alert pair, `text_similarity` rose from **0.5806** to **0.855** after the Blackbox rule annotation was corrected from "Frontend is down (synthetic check)" to "Cart is down (synthetic check)" (open issue 11). This is the only measured instance in the project of an estate configuration change moving a signal score, and it is evidence that `text_similarity` is sensitive to alert wording rather than to fault identity — relevant to Phase 13.
 - `cooccurrence` is **UNMEASURED**, not zero. The `alert_type_stats` table holds 6 rows derived from a contaminated ledger containing constructed alerts, rendering historical correlations unmeasurable on this dataset.
 
 **Implication for Phase 10:**
-With the current combination rule of summing scores against a static 0.5 threshold, a `text_similarity` of 0.525 alone would successfully merge two alerts that have NO component match and NO dependency proximity. This definitively quantifies the over-merge risk and proves that summing independent signals against a low threshold is fundamentally unsafe without a more rigorous combination logic (to be addressed in Phase 10).
+With the previous combination rule of summing unweighted scores against what was incorrectly recorded as a static 0.5 threshold, a `text_similarity` of 0.525 alone was hypothesized to successfully merge two alerts that have NO component match and NO dependency proximity. However, this was an unverified false-positive claim. `CORRELATION_THRESHOLD` has defaulted to 1.0 in config throughout, and at threshold 1.0 with the weight 0.5 introduced in PR #14, `text_similarity` of 0.525 contributes 0.2625 and cannot merge anything on its own. This clarifies that independent circumstantial signals require corroboration under the current weighting scheme to reach the 1.0 threshold.
 
 ### 2026-08-28 - Zabbix Recovery Events (Ingestion)
 **Decision:** Zabbix adapter now parses the `status` field from incoming payloads. `PROBLEM` maps to `firing`, and `RESOLVED` maps to `resolved`. If the `status` field is completely absent (e.g., from older ledger payloads or malformed requests), it defaults to `firing` and logs a warning.
@@ -218,3 +219,15 @@ With the current combination rule of summing scores against a static 0.5 thresho
 **Decision:** Changed the annotation text in the Prometheus Blackbox `CartEndpointDown` rule from "Frontend is down (synthetic check)" to "Cart is down (synthetic check)".
 **Reason:** The rule probes the cart endpoint, not the frontend. The previous summary was misleading and would incorrectly inform an operator of a frontend failure when only cart was affected.
 **Note:** Alerts received before 2026-08-28 carry the old "Frontend is down" text in their `raw_payload`. This is relevant to `text_similarity` scoring, as historical alert payloads will not match the corrected text exactly.
+
+### 2026-08-28 - Distance-0 Collinearity (Phase 10 Fix)
+**Decision:** `DependencyProximitySignal` now explicitly returns `0.0` for distance-0 (`best_direction == "self"`).
+**Reason:** Collinearity between signals double-counts the same phenomenon. If an alert occurs on the exact same component as the incident's centroid, the `same_component` signal already scores it 1.0 (weighted to 1.0). Previously, `dependency_proximity` also hardcoded a 1.0 score for `self`, resulting in a duplicate weighted boost (0.6) for the exact same underlying fact.
+
+### 2026-08-28 - Root Cause Candidate 'uncertain' Flag (Phase 10)
+**Decision:** The `uncertain` flag on a `RootCauseCandidate` is set to `True` when there is no traversal evidence supporting the candidate's rank (i.e. `direction == "self"` or `hops == 0`).
+**Reason:** The estate's topology is extremely sparse (currently 5 edges). When the graph lacks comprehensive observability edges, distance-based ranking is inherently unreliable because we cannot differentiate between "this component actually originated the failure but didn't fire an alert" and "we just don't have edges to the true root cause." Setting `uncertain = True` makes this limitation visible to operators rather than hiding behind a deceptively confident rank.
+
+### 2026-08-28 - Root Cause Ranking as a Timing Heuristic (Phase 10)
+**Decision:** With the `self` direction base score at 2.0 and the `earliest-alert` bonus at 5.0, ranking among `self`-only candidates is determined entirely by alert timing. 
+**Reason:** Every incident currently in the estate is self-only, so the graph-based ranking path is implemented but unexercised on real data. It is exercised only by the synthetic-graph unit test. Phase 13 must not present ranking as validated.

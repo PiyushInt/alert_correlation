@@ -12,14 +12,10 @@ NOTE: the action change is NOT exportable via configuration.export and must be
 recreated by hand after any Zabbix reset. See docs/DECISIONS.md.
 
 ## 2. Summed signal scores against a 0.5 threshold — CLOSED 2026-08-28
-Signals are summed; each can reach 1.0. Any single signal clearing 0.5 merges on its own.
-Measured values on this estate: same_component 1.0, dependency_proximity 1.0 (0.6 on a
-cross-component case), text_similarity 0.525, cooccurrence unmeasured.
+In Phase 10, the record was corrected to reflect that `CORRELATION_THRESHOLD` has defaulted to 1.0 throughout, and weights were introduced in PR #14.
+Observed: The claim that signal 2 alone successfully merged two unrelated alerts at 0.60 (or 0.525) was an unverified false positive. At threshold 1.0 with a weight of 0.5, a score of 0.525 contributes 0.2625 and cannot merge anything on its own. Circumstantial signals require corroboration under the actual weighting scheme.
 
-Observed: signal 2 alone merged two unrelated alerts at 0.60. text_similarity at 0.525
-would also merge on its own, with no component match and no proximity.
-
-This is a design decision, not a defect. It is an input to Phase 10.
+This is a design decision implemented in Phase 10.
 
 ## 3. Empty centroid default fails containment with incorrect reason — CLOSED
 In containment.py, if the candidate incident has no resolved components, the incoming alert is now correctly refused if it has a component, returning the reason "Empty Centroid: Incident has no resolved components to calculate distance against".
@@ -33,7 +29,7 @@ Phase 0 baseline. A tuning target for Phase 13, not a defect. The estate may not
 to do better; if so, say so rather than forcing the number.
 
 ## 6. Ledger contamination — OPEN
-The alerts table mixes real fault alerts, 9 constructed rows (source_tool='constructed'),
+The alerts table mixes real fault alerts, 12 constructed rows (source_tool='constructed'),
 and older hand-posted test rows. Not fixable by editing — the ledger is append-only.
 Phase 12 needs a clean run from fault injection only.
 
@@ -63,3 +59,6 @@ pipeline/dedup.py now logs at INFO on every deduplication hit, recording the inc
 
 ## 11. Blackbox cart rule has wrong summary text — CLOSED
 The Blackbox alert rule for the cart endpoint carried the annotation "Frontend is down (synthetic check)". It has been corrected to "Cart is down (synthetic check)". Estate configuration updated.
+
+## 12. Destruction of root_cause_candidates history for 991b1804 — OPEN
+On 2026-08-28, an ad-hoc script executed DELETE against `root_cause_candidates` for incident 991b1804, destroying all prior candidate sets including pipeline-generated ones. Two rows remain with a single `computed_at`. The append-only versioning Phase 10 was designed to demonstrate can no longer be shown from the database for that incident. This is deliberately not restored to keep the ledger internally consistent with the alerts table.

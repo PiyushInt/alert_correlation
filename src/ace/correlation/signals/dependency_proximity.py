@@ -60,7 +60,13 @@ class DependencyProximitySignal(Signal):
             # Incident DEPENDS ON alert
             base_score = settings.PROXIMITY_WEIGHT_INBOUND
         elif best_direction == "self":
-            base_score = 1.0
+            return SignalResult(
+                score=0.0,
+                evidence={
+                    "match": False,
+                    "reason": "same component; deferred to same_component signal",
+                },
+            )
         else:
             base_score = min(settings.PROXIMITY_WEIGHT_INBOUND, settings.PROXIMITY_WEIGHT_OUTBOUND)
 
