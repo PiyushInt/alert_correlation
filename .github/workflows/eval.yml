@@ -1,0 +1,36 @@
+name: Evaluation Pipeline
+
+on:
+  workflow_dispatch:
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install uv
+          uv sync --all-extras
+
+      - name: Start services
+        run: |
+          docker compose -f compose.yaml up -d
+          # Wait for services to be ready
+          sleep 10
+          # Run database migrations
+          uv run alembic upgrade head
+
+      - name: Score captures and check for regression
+        run: |
+          # Scores existing captures only, does NOT run scenarios.
+          # The database contains the captures loaded into ace_db_eval.
+          # Run the scorer against the baseline.
+          uv run python eval/scorer.py --baseline results/BASELINE.json

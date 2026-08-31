@@ -1,0 +1,17 @@
+id: holdout_adv_concurrent
+family: adversarial
+fault_script: ./estate/chaos/fill_disk.sh
+arguments: ["/mnt/valkey-data"]
+duration_seconds: 400
+ground_truth:
+  expected_incidents:
+    - description: disk fill on valkey data
+      firing_alerts: 2
+      resolved_alerts: 2
+      tools: [prometheus, zabbix]
+      true_cause_component: /mnt/valkey-data
+    - description: concurrent cpu stress on cart
+      firing_alerts: 3
+      resolved_alerts: 3
+      tools: [prometheus]
+      true_cause_component: cart

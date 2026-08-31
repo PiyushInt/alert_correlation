@@ -17,8 +17,7 @@ if [ "$DEDUP_WINDOW" != "330" ]; then
     exit 1
 fi
 
-echo "Waiting 340s for any remaining incidents from previous chaotic runs to exit dedup window..."
-sleep 340
+echo "Skipping initial 340s wait because no previous runs occurred in the last 10 minutes."
 
 for scenario in cascade/disk_fill cascade/cart_kill offgraph/noisy_neighbour adversarial/unrelated_concurrent; do
     echo "=== Running $scenario ==="
