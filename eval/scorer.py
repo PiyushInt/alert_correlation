@@ -13,22 +13,12 @@ DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql+psycopg://ace_readonly
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-def fetch_latest_run_for_scenario(db, scenario_name: str) -> str:
-    """Finds the most recent ace_eval_run_id for a given scenario name."""
-    sql = text("""
-        SELECT COALESCE(labels->>'ace_eval_run_id', raw_payload->>'ace_eval_run_id') as run_id,
-               MAX(received_at) as latest
-        FROM alerts
-        WHERE labels->>'ace_eval_scenario' = :scenario
-           OR raw_payload->>'ace_eval_scenario' = :scenario
-        GROUP BY 1
-        ORDER BY latest DESC
-        LIMIT 1
-    """)
-    row = db.execute(sql, {"scenario": scenario_name}).fetchone()
-    if row:
-        return row.run_id
-    return None
+def load_scenario_mapping() -> dict:
+    mapping_path = "eval/scenario_mapping.json"
+    if not os.path.exists(mapping_path):
+        return {}
+    with open(mapping_path, "r") as f:
+        return json.load(f)
 
 def fetch_pipeline_incidents(db, run_id: str) -> list[PipelineIncident]:
     sql = text("""
@@ -140,15 +130,17 @@ def score_scenarios():
     
     results = {}
     
+    mapping = load_scenario_mapping()
+    
     for sf in scenario_files:
         scenario_name = os.path.splitext(os.path.basename(sf))[0]
         gt = load_ground_truth(sf)
         if not gt or not gt.expected_incidents:
             continue
             
-        run_id = fetch_latest_run_for_scenario(db, scenario_name)
+        run_id = mapping.get(scenario_name)
         if not run_id:
-            print(f"Skipping {scenario_name}: no run_id found.")
+            print(f"Skipping {scenario_name}: no run_id found in mapping.")
             continue
             
         pipeline_incidents = fetch_pipeline_incidents(db, run_id)

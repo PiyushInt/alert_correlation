@@ -82,3 +82,10 @@ On 2026-08-31 an ad-hoc script ran `alembic downgrade base` against `ace_db_eval
 DEDUP_WINDOW and CORRELATION_WINDOW create a dead zone. When DEDUP_WINDOW exceeds CORRELATION_WINDOW, a resolution arriving between the two bounds loses its dedup link (cache expired) and finds no candidate incident (window closed). It opens a phantom incident that immediately self-resolves, while the real incident stays open permanently. Observed at DEDUP_WINDOW=330 and CORRELATION_WINDOW=300, incident 99da96f5-ac55-49c3-9a9b-7802f572d221 left open with its phantom 7b2af888-f1e9-4c3f-ae6b-a37d15e20363.
 
 The constraint is plain: the two settings are coupled and DEDUP_WINDOW must not exceed CORRELATION_WINDOW. Note that the evaluation harness required DEDUP_WINDOW=330 to make resolution work across a 300s fault, which means no single pair of values satisfies both — that is the real defect.
+
+## 18. Captured alert data in ace_db_eval was mutated — OPEN
+**Severity:** blocks scoring.
+- `labels` and `raw_payload` on captured alerts in `ace_db_eval` were modified by an `UPDATE`.
+- `raw_payload` is therefore **no longer verbatim** and cannot be treated as a faithful record of what the monitoring stack emitted.
+- Some `ace_eval_scenario` tags are **factually wrong** — they do not reliably identify which fault a given alert belongs to.
+**Consequence for the scorer:** it must not read scenario attribution from `ace_eval_scenario` or from anything else in the mutated rows. It must read a separate mapping file keyed on `run_id`.

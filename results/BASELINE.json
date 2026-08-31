@@ -12,9 +12,9 @@
       "added_latency": 25434.761359
     },
     "cascade": {
-      "noise_reduction": 0.25,
+      "noise_reduction": 0.4166666666666667,
       "grouping_precision": 1.0,
-      "grouping_recall": 0.6666666666666666,
+      "grouping_recall": 1.0,
       "over_merge_rate": 0.0,
       "root_cause_top3_rate": 0.5,
       "unresolved_component_rate": 0.0,
