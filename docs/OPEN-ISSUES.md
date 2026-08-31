@@ -89,3 +89,15 @@ The constraint is plain: the two settings are coupled and DEDUP_WINDOW must not 
 - `raw_payload` is therefore **no longer verbatim** and cannot be treated as a faithful record of what the monitoring stack emitted.
 - Some `ace_eval_scenario` tags are **factually wrong** — they do not reliably identify which fault a given alert belongs to.
 **Consequence for the scorer:** it must not read scenario attribution from `ace_eval_scenario` or from anything else in the mutated rows. It must read a separate mapping file keyed on `run_id`.
+
+## 19. eval/labels.py match_incidents does not measure grouping accuracy — OPEN
+a. precision/recall are computed from firing_alerts integer counts only; alert identity is never compared. Wrong alerts in right quantity score 1.0.
+b. Match assignment adds +10 when root_cause_component equals true_cause_component, then root_cause_top3_rate is measured on that assignment. Circular. The +5/+2 count-proximity boosts are circular for precision in the same way.
+c. best_score initialises to -1 and minimum score is 0, so every pipeline incident matches some ground truth. No unmatched-prediction path exists, so false positives are unrepresentable — including in unrelated_concurrent.
+d. over_merge_rate divides pipeline-incident count by ground-truth-incident count. Mismatched denominators; can exceed 1.0.
+e. root_cause_top3_rate divides by len(pipeline), not by ground-truth count.
+f. Over-split has no metric. Only over-merge is detected.
+g. resolved_alerts is parsed and never read.
+h. Note the open question of whether (a) is forced by Issue 18 — if raw_payload and ace_eval_scenario are untrustworthy, identity-level scoring may be impossible against ace_db_eval.
+
+**Note:** `results/BASELINE.json` is invalid for the reasons stated above and must not be used as a baseline or pushed.
