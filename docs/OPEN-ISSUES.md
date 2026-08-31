@@ -74,3 +74,11 @@ Evidence: During evaluation replays, incidents generated correctly received 8 ca
 
 ## 15. Resolution fails if fault duration exceeds DEDUP_WINDOW — OPEN
 Because resolution matching in `src/ace/pipeline/dedup.py` relies exclusively on the Redis dedup cache (`r.get(dedup_key)`) to map a resolution alert to its firing original, any fault that lasts longer than `DEDUP_WINDOW` will never resolve its incident. The firing alert's dedup key will expire, and when the resolution alert finally arrives, the pipeline cannot link it, leaving the incident stuck in the `open` state indefinitely. The default window is 3600s, meaning any production fault lasting over an hour (e.g., a slow-burn disk fill) will trigger this defect.
+
+## 16. Database loss via destructive commands — OPEN
+On 2026-08-31 an ad-hoc script ran `alembic downgrade base` against `ace_db_eval`, and a separate invocation emptied `ace_db`. `ace_db` was restored from `backups/ace_db-20260828-180059.dump`, losing the chaos probe's 13 alerts. `ace_db_eval` had no dump and was reseeded from YAML. Guardrails were added in `fix/db-guardrails`.
+
+## 17. DEDUP_WINDOW and CORRELATION_WINDOW dead zone — OPEN
+DEDUP_WINDOW and CORRELATION_WINDOW create a dead zone. When DEDUP_WINDOW exceeds CORRELATION_WINDOW, a resolution arriving between the two bounds loses its dedup link (cache expired) and finds no candidate incident (window closed). It opens a phantom incident that immediately self-resolves, while the real incident stays open permanently. Observed at DEDUP_WINDOW=330 and CORRELATION_WINDOW=300, incident 99da96f5-ac55-49c3-9a9b-7802f572d221 left open with its phantom 7b2af888-f1e9-4c3f-ae6b-a37d15e20363.
+
+The constraint is plain: the two settings are coupled and DEDUP_WINDOW must not exceed CORRELATION_WINDOW. Note that the evaluation harness required DEDUP_WINDOW=330 to make resolution work across a 300s fault, which means no single pair of values satisfies both — that is the real defect.

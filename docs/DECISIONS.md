@@ -251,3 +251,15 @@ Of the 5 genuine rows, 4 show `dependency_proximity: 1.0` and predate the Phase 
 A disk fill on `/mnt/valkey-data` caused a Blackbox `CartEndpointDown` on `cart` — the first genuine cascade observed on this estate. The correlation engine refused to group it. Measured: 3 hops (`cart` to `valkey` to `docker-host-01` to `/mnt/valkey-data`), `dependency_proximity` raw 0.25 after two applications of the 0.5 decay factor, weighted 0.15; `text_similarity` raw 0.855, weighted 0.4275; `same_component` 0.0; `cooccurrence` 0.0; total 0.5775 against a threshold of 1.0. Signal 2 fired and correctly identified the outbound direction. Hop decay reduced its contribution below the merging threshold.
 
 This is designed behaviour, not a defect. Phase 13 must report it: the only real cascade this estate produced was not grouped, because a three-hop causal chain scores below the configured threshold.
+
+### 2026-08-31 - Adversarial Scenario Result (Phase 12b)
+**Decision:** Recorded the first real adversarial result: two unrelated concurrent faults (disk fill on /mnt/valkey-data and kill cart), injected 30 seconds apart, produced TWO separate incidents without over-merging.
+**Reason:** The disk fill resolved to /mnt/valkey-data and the cart failure resolved to cart. The engine correctly maintained boundaries between these unrelated faults. *(Note: The original incident IDs c895ccf8... and 8ec6405f... cited here were lost when the database was dropped on 2026-08-31).*
+
+### 2026-08-31 - Root Cause Localisation to Graph Neighbours (Phase 12b)
+**Decision:** Both root cause mismatches in the Part A replays localised to a graph neighbour rather than the alerting component. `disk_fill` put the blackbox cart alert on `valkey`; `noisy_neighbour` put the CPU alert on `/mnt/valkey-data` instead of `docker-host-01`.
+**Reason:** With an inbound base of 20.0 against a self base of 2.0, an adjacent component outscores the component that actually fired. Recorded as measured behaviour and as Phase 13 tuning material. The weights have not been changed.
+
+### 2026-08-31 - Runner Validation Limitations (Phase 12b)
+**Decision:** The evaluation check logic in `eval/runner.py` counts incidents rather than verifying components or membership. As a result, `disk_fill` and `noisy_neighbour` were reported as MATCHES despite localising to incorrect components.
+**Reason:** A count-only check is not scoring. Part B's scorer must explicitly verify components and membership to accurately score scenarios.

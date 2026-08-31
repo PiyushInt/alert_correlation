@@ -25,3 +25,9 @@ repos:
         entry: '(?i)(^\.env.*|.*secret.*)'
         language: pygrep
         files: '^\.env'
+      - id: block-destructive-db-commands
+        name: Block destructive database commands
+        entry: 'downgrade base|TRUNCATE|DROP TABLE'
+        language: pygrep
+        files: '^(scripts/|eval/|src/|[^/]+$)'
+        exclude: '^(AGENTS\.md|\.pre-commit-config\.yaml|scripts/check\.sh)$'

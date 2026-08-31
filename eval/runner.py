@@ -37,6 +37,7 @@ def query_incidents_for_run(db, run_id):
         JOIN incident_alerts ia ON i.id = ia.incident_id
         JOIN alerts a ON ia.alert_id = a.id
         WHERE a.labels->>'ace_eval_run_id' = :run_id
+           OR a.raw_payload->>'ace_eval_run_id' = :run_id
     """)
     incidents = []
     rows = db.execute(sql, {"run_id": run_id}).fetchall()
@@ -71,24 +72,12 @@ def query_incidents_for_run(db, run_id):
     return incidents
 
 def inject_run_id(payload_dict, source_tool, run_id):
-    if source_tool == "prometheus":
-        if "alerts" in payload_dict:
-            for alert in payload_dict["alerts"]:
-                if "labels" not in alert:
-                    alert["labels"] = {}
-                alert["labels"]["ace_eval_run_id"] = run_id
+    if source_tool in ("prometheus", "blackbox"):
+        if "labels" not in payload_dict:
+            payload_dict["labels"] = {}
+        payload_dict["labels"]["ace_eval_run_id"] = run_id
     elif source_tool == "zabbix":
-        if "value" in payload_dict:
-            # Zabbix payload is a JSON string inside 'value'
-            try:
-                inner = json.loads(payload_dict["value"])
-                if "tags" not in inner:
-                    inner["tags"] = {}
-                # Zabbix uses tags for identifying labels
-                inner["tags"]["ace_eval_run_id"] = run_id
-                payload_dict["value"] = json.dumps(inner)
-            except Exception as e:
-                logger.error(f"Failed to inject run_id into Zabbix payload: {e}")
+        payload_dict["ace_eval_run_id"] = run_id
     return payload_dict
 
 def run_capture(scenario_file, scenario_data):
@@ -186,12 +175,11 @@ def run_replay(capture_file):
                 
         last_received_at = current_received_at
         
-        # Inject run_id and wrap for Prometheus
+        # Inject run_id
+        raw = inject_run_id(raw, source_tool, run_id)
+        
+        # Wrap for Prometheus/Blackbox
         if source_tool in ("prometheus", "blackbox"):
-            if "labels" not in raw:
-                raw["labels"] = {}
-            raw["labels"]["ace_eval_run_id"] = run_id
-            
             # DB stores individual alert_data. API expects AlertmanagerPayload.
             raw = {
                 "status": raw.get("status", "firing"),
@@ -199,7 +187,6 @@ def run_replay(capture_file):
             }
             url = f"{API_URL}/alertmanager"
         elif source_tool == "zabbix":
-            raw["ace_eval_run_id"] = run_id
             raw = {
                 "value": json.dumps(raw)
             }

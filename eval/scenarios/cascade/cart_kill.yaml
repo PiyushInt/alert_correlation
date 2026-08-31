@@ -1,0 +1,12 @@
+id: cascade_cart_kill
+family: cascade
+fault_script: ./estate/chaos/kill_service.sh
+arguments: []
+duration_seconds: 300
+ground_truth:
+  expected_incidents:
+    - description: cart endpoint down
+      firing_alerts: 2
+      resolved_alerts: 2
+      tools: [blackbox, prometheus]
+      true_cause_component: cart

@@ -1,0 +1,24 @@
+id: adversarial_unrelated_concurrent
+family: adversarial
+fault_script: bash
+arguments: 
+  - "-c"
+  - "bash ./estate/chaos/fill_disk.sh & sleep 30; bash ./estate/chaos/kill_service.sh; wait"
+duration_seconds: 300
+ground_truth:
+  expected_incidents:
+    - description: disk fill on /mnt/valkey-data
+      firing_alerts: 2
+      resolved_alerts: 2
+      tools: [prometheus, zabbix]
+      true_cause_component: /mnt/valkey-data
+    - description: cart endpoint down
+      firing_alerts: 2
+      resolved_alerts: 2
+      tools: [blackbox, prometheus]
+      true_cause_component: cart
+  # Note: The two faults are not clearly unrelated. A disk fill on /mnt/valkey-data
+  # already produces a Blackbox CartEndpointDown through a real cascade. 
+  # kill_service.sh on cart produces CartEndpointDown as well. 
+  # Therefore, one alert type comes from both faults. 
+  # The expected incident count here is a best estimate of 2, but it may merge into 1 or 3 depending on exact timing and correlation rules. Let the capture decide.

@@ -14,6 +14,12 @@ if [ -z "${CI}" ]; then
     fi
 fi
 
+echo "Checking for destructive database commands..."
+if git ls-files | grep -E '^(scripts/|eval/|src/|[^/]+$)' | grep -vE '^(AGENTS\.md|\.pre-commit-config\.yaml|scripts/check\.sh)$' | xargs git grep -E 'downgrade base|TRUNCATE|DROP TABLE' -- > /dev/null 2>&1; then
+    echo "ERROR: Destructive database commands found in executable code."
+    exit 1
+fi
+
 echo "Running ruff format check..."
 ruff format --check src/ tests/
 
