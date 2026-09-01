@@ -127,3 +127,19 @@ a. Zabbix eval attribution was dropped by the adapter's fixed label set, with th
 b. `eval/runner.py` reported success on failed sends, which allowed the above defect to go undetected and violates the Phase 6 standing rule that components whose output nothing validates must fail loudly.
 c. `ZabbixAdapter` assigns `external_id = uuid4()` per received event, so Zabbix alerts have no reproducible identity across replays. This affects dedup, resolution linking, and fingerprinting, and needs to be addressed in a future task.
 
+
+## 22. Dropping a database removes ace_readonly's grants — PROCEDURAL
+`DROP DATABASE` destroys all privileges granted within it. The `ace_readonly`
+role survives (roles are cluster-level) but has no access to the recreated
+database, so every investigation query fails with "permission denied" until
+regranted. The temptation at that moment is to use `ace_user` "just to look",
+which is how several of this project's database incidents started.
+
+Any recreate procedure must include, as ace_user:
+  GRANT CONNECT ON DATABASE <db> TO ace_readonly;
+  GRANT USAGE ON SCHEMA public TO ace_readonly;
+  GRANT SELECT ON ALL TABLES IN SCHEMA public TO ace_readonly;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO ace_readonly;
+
+The last line is required or future migrations create tables ace_readonly
+cannot read.
