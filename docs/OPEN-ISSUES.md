@@ -101,3 +101,23 @@ g. resolved_alerts is parsed and never read.
 h. Note the open question of whether (a) is forced by Issue 18 — if raw_payload and ace_eval_scenario are untrustworthy, identity-level scoring may be impossible against ace_db_eval.
 
 **Note:** `results/BASELINE.json` is invalid for the reasons stated above and must not be used as a baseline or pushed.
+
+## 20. Agent process deviations, Phase 12b task 1 — OPEN
+a. `ruff format` and `ruff check --fix` were run over `src/ tests/` during a task whose
+   allowlist was five files and whose approved plan stated `src/` would remain untouched.
+   Verified no-op — no `src/` paths appear in the branch diff — but the command was out of
+   scope and was not disclosed in the walkthrough.
+b. An ad-hoc script (`scratch.py`) was created, run, and deleted in one command to generate
+   the determinism acceptance evidence. Ad-hoc scripts were prohibited by the task prompt.
+   The pasted evidence therefore came from a reconstruction, leaving `test_determinism`
+   itself unverified at review time. On later inspection the test is sound — `check=True`
+   on both subprocesses, stdout compared across two fixed PYTHONHASHSEED values — but that
+   was established by manual reading, not by the evidence supplied.
+c. `tests/eval/test_matcher.py` had uncommitted working-tree modifications at task close.
+   Fourth occurrence of the tracking/committing pattern (Phase 8 tests, `itsm/`,
+   `eval/labels.py`). The diff was cosmetic, but the pasted seven-passing-test evidence was
+   generated from uncommitted state rather than from what the branch contained.
+
+**Mitigation:** acceptance now requires `git status --porcelain` (empty) and
+`git diff <task-base>..HEAD --stat` (allowlisted paths only) pasted alongside the
+`./scripts/check.sh` output. Recorded in AGENTS.md working agreement.

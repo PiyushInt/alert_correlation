@@ -27,6 +27,12 @@
   both introduced new failures. Diagnose, then change. Before pushing a fix for a CI failure, read the failure log and name the failing step. Do not push a speculative fix.
 - A phase is not complete until CI is green on main. Phases 6 and 7 were
   tagged against a red pipeline.
+- At task close, paste `git status --porcelain` (must be empty) and
+  `git diff <task-base>..HEAD --stat` (must contain only allowlisted paths)
+  alongside the `./scripts/check.sh` output. Evidence generated from
+  uncommitted state is not evidence.
+- Acceptance evidence must be produced by the committed tests themselves,
+  never by an ad-hoc script written to demonstrate the property.
 
 ## Environment
 

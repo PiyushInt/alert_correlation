@@ -265,5 +265,7 @@ This is designed behaviour, not a defect. Phase 13 must report it: the only real
 **Reason:** A count-only check is not scoring. Part B's scorer must explicitly verify components and membership to accurately score scenarios.
 
 ### 2026-09-01 - Evaluation Matcher Strict Typing (Phase 12b)
-**Decision:** `mypy --strict` on `src/` is explicitly extended to the evaluation code (`eval/matcher.py` and its tests).
+**Decision:** `mypy --strict` on `src/` is explicitly extended to the evaluation code (`eval/matcher.py` and its tests). This is a deliberate departure from the plan's "mypy strict on `src/`" rule, which predates the existence of `eval/`.
+**Alternatives Rejected:** Extending the gate to all of `eval/`. Rejected for now because `eval/labels.py` is scheduled for replacement under Issue 19 and its four existing errors would be fixed in code about to be deleted. The gate widens to the rest of `eval/` in Part B task 2.
 **Reason:** `eval/` is the measuring instrument for Gates B and C. Weak typing in the evaluation harness could mask bugs in the metrics that determine whether the correlation engine passes its success criteria. The measuring instrument must be held to the same standard as the application.
+**Coverage limitation:** `test_determinism` executes its fixture as an embedded source string run in a subprocess, so that fixture's logic is not seen by the strict gate. The subprocess result is guarded by `check=True` on both invocations, so a crashing run fails the test rather than passing on empty output.
