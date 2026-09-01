@@ -3,13 +3,16 @@ import json
 import logging
 import os
 import subprocess
+import sys
 import time
 import uuid
+from typing import Any
+
 import yaml
 import httpx
 from datetime import datetime, UTC
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 # Setup basic logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -26,7 +29,7 @@ SessionLocal = sessionmaker(bind=engine)
 
 API_URL = "http://localhost:8000/webhooks"
 
-def query_incidents_for_run(db, run_id):
+def query_incidents_for_run(db: Session, run_id: str) -> list[dict[str, Any]]:
     """
     Finds all incidents that contain at least one alert with ace_eval_run_id == run_id.
     Returns a list of dicts representing the incident structure.
@@ -39,7 +42,7 @@ def query_incidents_for_run(db, run_id):
         WHERE a.labels->>'ace_eval_run_id' = :run_id
            OR a.raw_payload->>'ace_eval_run_id' = :run_id
     """)
-    incidents = []
+    incidents: list[dict[str, Any]] = []
     rows = db.execute(sql, {"run_id": run_id}).fetchall()
     
     for row in rows:
@@ -71,7 +74,9 @@ def query_incidents_for_run(db, run_id):
     incidents.sort(key=lambda x: (x["member_count"], ",".join(x["source_tools"])))
     return incidents
 
-def inject_run_id(payload_dict, source_tool, run_id, scenario_name):
+def inject_run_id(
+    payload_dict: dict[str, Any], source_tool: str, run_id: str, scenario_name: str
+) -> dict[str, Any]:
     """
     Injects ace_eval_run_id and ace_eval_scenario into the payload.
     For zabbix, we have to put it in the top level.
@@ -87,11 +92,13 @@ def inject_run_id(payload_dict, source_tool, run_id, scenario_name):
         payload_dict["ace_eval_scenario"] = scenario_name
     return payload_dict
 
-def run_capture(scenario_file, scenario_data):
+def run_capture(scenario_file: str, scenario_data: dict[str, Any]) -> str | None:
     run_id = str(uuid.uuid4())
     logger.info(f"--- Starting CAPTURE Mode (run_id: {run_id}) ---")
     
     fault_script = scenario_data.get("fault_script")
+    if fault_script is None:
+        raise ValueError("scenario missing required 'fault_script'")
     args = scenario_data.get("arguments", [])
     duration = scenario_data.get("duration_seconds", 300)
     
@@ -148,7 +155,7 @@ def run_capture(scenario_file, scenario_data):
     logger.info(f"Capture written to {capture_file}")
     return capture_file
 
-def run_replay(capture_file, scenario_name):
+def run_replay(capture_file: str, scenario_name: str) -> list[dict[str, Any]]:
     run_id = str(uuid.uuid4())
     logger.info(f"--- Starting REPLAY Mode (run_id: {run_id}, scenario: {scenario_name}) ---")
     
@@ -215,7 +222,6 @@ def run_replay(capture_file, scenario_name):
             failed_sends += 1
             
     if failed_sends > 0:
-        import sys
         logger.error(f"FATAL: {failed_sends} out of {total_sends} payloads failed to send. Aborting run.")
         sys.exit(1)
         
@@ -231,7 +237,7 @@ def run_replay(capture_file, scenario_name):
     logger.info(f"Replay {run_id} produced {len(incidents)} incidents.")
     return incidents
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", required=True, help="Path to scenario YAML (e.g. cascade/disk_fill)")
     parser.add_argument("--capture", action="store_true", help="Run capture mode")
