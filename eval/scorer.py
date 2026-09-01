@@ -9,7 +9,7 @@ from ace.db.models.alerts import Alert
 from ace.db.models.incidents import Incident, IncidentAlert, NotificationLog, RootCauseCandidate
 from eval.labels import load_ground_truth, match_incidents, PipelineIncident
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql+psycopg://ace_readonly:ace_readonly@localhost:5433/ace_db_eval")
+DATABASE_URL = "postgresql+psycopg://ace_readonly:ace_readonly@localhost:5433/ace_db_eval"
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
