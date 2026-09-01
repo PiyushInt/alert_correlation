@@ -1,13 +1,11 @@
 import os
-import sys
 import subprocess
-import json
-import pytest
+import sys
+
 from eval.matcher import (
     GroundTruthIncident,
     PredictedIncident,
     match_incidents,
-    canonical_serialize_assignment,
 )
 
 
@@ -125,8 +123,12 @@ from eval.matcher import (
     canonical_serialize_assignment
 )
 
-gt1 = GroundTruthIncident(id="gt1", family="f1", alerts=frozenset({"A", "B"}), expected_root_cause="rc")
-gt2 = GroundTruthIncident(id="gt2", family="f1", alerts=frozenset({"C", "D"}), expected_root_cause="rc")
+gt1 = GroundTruthIncident(
+    id="gt1", family="f1", alerts=frozenset({"A", "B"}), expected_root_cause="rc"
+)
+gt2 = GroundTruthIncident(
+    id="gt2", family="f1", alerts=frozenset({"C", "D"}), expected_root_cause="rc"
+)
 p1 = PredictedIncident(id="p1", alerts=frozenset({"A", "B", "C"}), root_cause_ranked=("rc",))
 p2 = PredictedIncident(id="p2", alerts=frozenset({"D"}), root_cause_ranked=("rc",))
 
