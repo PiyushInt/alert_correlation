@@ -121,3 +121,9 @@ c. `tests/eval/test_matcher.py` had uncommitted working-tree modifications at ta
 **Mitigation:** acceptance now requires `git status --porcelain` (empty) and
 `git diff <task-base>..HEAD --stat` (allowlisted paths only) pasted alongside the
 `./scripts/check.sh` output. Recorded in AGENTS.md working agreement.
+
+## 21. Zabbix eval attribution and runner silent failures — OPEN
+a. Zabbix eval attribution was dropped by the adapter's fixed label set, with the consequence that harness metrics excluded the second tool (Zabbix) entirely.
+b. `eval/runner.py` reported success on failed sends, which allowed the above defect to go undetected and violates the Phase 6 standing rule that components whose output nothing validates must fail loudly.
+c. `ZabbixAdapter` assigns `external_id = uuid4()` per received event, so Zabbix alerts have no reproducible identity across replays. This affects dedup, resolution linking, and fingerprinting, and needs to be addressed in a future task.
+
