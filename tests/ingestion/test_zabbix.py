@@ -160,3 +160,55 @@ def test_zabbix_status_missing_logs_warning(db_session: Session) -> None:
         # Verify the warning was logged
         warning_calls = [call.args[0] for call in mock_warning.call_args_list]
         assert any("Zabbix payload missing 'status' field" in arg for arg in warning_calls)
+
+
+def test_zabbix_eval_attribution_passthrough(db_session: Session) -> None:
+    adapter = ZabbixAdapter()
+
+    payload = {
+        "value": json.dumps(
+            {
+                "host": "docker-host-01",
+                "trigger_name": "High disk usage on /mnt/valkey-data",
+                "severity": "High",
+                "item_key": "vfs.fs.size[/mnt/valkey-data,pused]",
+                "item_value": "98.013113",
+                "event_time": "2026.08.27T18:45:04Z",
+                "ace_eval_run_id": "test-run-id-123",
+                "ace_eval_scenario": "disk-fill",
+            }
+        )
+    }
+
+    with patch("ace.ingestion.resolver.Resolver.resolve", return_value=(None, True)):
+        alerts = adapter.normalize(payload, db_session)
+        assert len(alerts) == 1
+        assert "ace_eval_run_id" in alerts[0].labels
+        assert alerts[0].labels["ace_eval_run_id"] == "test-run-id-123"
+        assert "ace_eval_scenario" in alerts[0].labels
+        assert alerts[0].labels["ace_eval_scenario"] == "disk-fill"
+
+
+def test_zabbix_eval_attribution_absent(db_session: Session) -> None:
+    adapter = ZabbixAdapter()
+
+    payload = {
+        "value": json.dumps(
+            {
+                "host": "docker-host-01",
+                "trigger_name": "High disk usage on /mnt/valkey-data",
+                "severity": "High",
+                "item_key": "vfs.fs.size[/mnt/valkey-data,pused]",
+                "item_value": "98.013113",
+                "event_time": "2026.08.27T18:45:04Z",
+            }
+        )
+    }
+
+    with patch("ace.ingestion.resolver.Resolver.resolve", return_value=(None, True)):
+        alerts = adapter.normalize(payload, db_session)
+        assert len(alerts) == 1
+
+        # Verify no keys beginning with 'ace_eval_' appear in labels
+        for key in alerts[0].labels.keys():
+            assert not key.startswith("ace_eval_")
