@@ -166,6 +166,8 @@ def run_replay(capture_file, scenario_name):
     logger.info(f"Loaded {len(payloads)} payloads for replay.")
     
     last_received_at = None
+    failed_sends = 0
+    total_sends = len(payloads)
     
     for p in payloads:
         source_tool = p["source_tool"]
@@ -204,11 +206,18 @@ def run_replay(capture_file, scenario_name):
         try:
             r = httpx.post(url, json=raw, timeout=5.0)
             if r.status_code not in (200, 202):
-                logger.error(f"Failed to post {source_tool} payload: {r.status_code} {r.text}")
+                logger.error(f"Failed to post {source_tool} payload to {url}: {r.status_code} {r.text}")
+                failed_sends += 1
             else:
                 logger.info(f"Successfully posted {source_tool} payload")
         except Exception as e:
-            logger.error(f"Exception posting payload: {e}")
+            logger.error(f"Exception posting {source_tool} payload to {url}: {e}")
+            failed_sends += 1
+            
+    if failed_sends > 0:
+        import sys
+        logger.error(f"FATAL: {failed_sends} out of {total_sends} payloads failed to send. Aborting run.")
+        sys.exit(1)
         
     # Wait for pipeline to settle
     wait_time = 305  # CORRELATION_WINDOW is 300s
