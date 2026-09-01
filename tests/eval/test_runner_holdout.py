@@ -15,8 +15,15 @@ def test_holdout_scenario_refused_without_flag() -> None:
     """
     fake_holdout_path = "eval/holdout/does_not_exist_for_test"
 
+    # eval/captures/ is gitignored (it holds run artifacts, never committed),
+    # so it may not exist on a fresh checkout. Snapshot presence-or-absence
+    # rather than assuming the directory is there.
     captures_dir = REPO_ROOT / "eval" / "captures"
-    before = set(captures_dir.iterdir())
+
+    def snapshot() -> set[Path] | None:
+        return set(captures_dir.iterdir()) if captures_dir.exists() else None
+
+    before = snapshot()
 
     env = dict(os.environ)
     env["DATABASE_URL"] = "postgresql+psycopg://fake:fake@localhost:1/ace_db_eval"
@@ -30,7 +37,7 @@ def test_holdout_scenario_refused_without_flag() -> None:
         timeout=30,
     )
 
-    after = set(captures_dir.iterdir())
+    after = snapshot()
 
     assert result.returncode != 0
     assert "Refusing to run holdout scenario" in result.stderr
