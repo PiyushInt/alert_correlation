@@ -263,3 +263,7 @@ This is designed behaviour, not a defect. Phase 13 must report it: the only real
 ### 2026-08-31 - Runner Validation Limitations (Phase 12b)
 **Decision:** The evaluation check logic in `eval/runner.py` counts incidents rather than verifying components or membership. As a result, `disk_fill` and `noisy_neighbour` were reported as MATCHES despite localising to incorrect components.
 **Reason:** A count-only check is not scoring. Part B's scorer must explicitly verify components and membership to accurately score scenarios.
+
+### 2026-09-01 - Evaluation Matcher Strict Typing (Phase 12b)
+**Decision:** `mypy --strict` on `src/` is explicitly extended to the evaluation code (`eval/matcher.py` and its tests).
+**Reason:** `eval/` is the measuring instrument for Gates B and C. Weak typing in the evaluation harness could mask bugs in the metrics that determine whether the correlation engine passes its success criteria. The measuring instrument must be held to the same standard as the application.

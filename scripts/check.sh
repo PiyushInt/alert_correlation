@@ -28,6 +28,7 @@ ruff check src/ tests/
 
 echo "Running mypy..."
 mypy src/
+mypy --strict --explicit-package-bases eval/matcher.py tests/eval/test_matcher.py
 
 echo "Running pytest..."
 pytest
