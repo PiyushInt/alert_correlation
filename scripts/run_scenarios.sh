@@ -1,5 +1,6 @@
 #!/bin/bash
 set -e
+set -o pipefail
 export DATABASE_URL="postgresql+psycopg://ace_user:ace_password@localhost:5433/ace_db_eval"
 source .venv/bin/activate
 
