@@ -82,3 +82,64 @@ On 2026-08-31 an ad-hoc script ran `alembic downgrade base` against `ace_db_eval
 DEDUP_WINDOW and CORRELATION_WINDOW create a dead zone. When DEDUP_WINDOW exceeds CORRELATION_WINDOW, a resolution arriving between the two bounds loses its dedup link (cache expired) and finds no candidate incident (window closed). It opens a phantom incident that immediately self-resolves, while the real incident stays open permanently. Observed at DEDUP_WINDOW=330 and CORRELATION_WINDOW=300, incident 99da96f5-ac55-49c3-9a9b-7802f572d221 left open with its phantom 7b2af888-f1e9-4c3f-ae6b-a37d15e20363.
 
 The constraint is plain: the two settings are coupled and DEDUP_WINDOW must not exceed CORRELATION_WINDOW. Note that the evaluation harness required DEDUP_WINDOW=330 to make resolution work across a 300s fault, which means no single pair of values satisfies both — that is the real defect.
+
+## 18. Captured alert data in ace_db_eval was mutated — OPEN
+**Severity:** blocks scoring.
+- `labels` and `raw_payload` on captured alerts in `ace_db_eval` were modified by an `UPDATE`.
+- `raw_payload` is therefore **no longer verbatim** and cannot be treated as a faithful record of what the monitoring stack emitted.
+- Some `ace_eval_scenario` tags are **factually wrong** — they do not reliably identify which fault a given alert belongs to.
+**Consequence for the scorer:** it must not read scenario attribution from `ace_eval_scenario` or from anything else in the mutated rows. It must read a separate mapping file keyed on `run_id`.
+
+## 19. eval/labels.py match_incidents does not measure grouping accuracy — OPEN
+a. precision/recall are computed from firing_alerts integer counts only; alert identity is never compared. Wrong alerts in right quantity score 1.0.
+b. Match assignment adds +10 when root_cause_component equals true_cause_component, then root_cause_top3_rate is measured on that assignment. Circular. The +5/+2 count-proximity boosts are circular for precision in the same way.
+c. best_score initialises to -1 and minimum score is 0, so every pipeline incident matches some ground truth. No unmatched-prediction path exists, so false positives are unrepresentable — including in unrelated_concurrent.
+d. over_merge_rate divides pipeline-incident count by ground-truth-incident count. Mismatched denominators; can exceed 1.0.
+e. root_cause_top3_rate divides by len(pipeline), not by ground-truth count.
+f. Over-split has no metric. Only over-merge is detected.
+g. resolved_alerts is parsed and never read.
+h. Note the open question of whether (a) is forced by Issue 18 — if raw_payload and ace_eval_scenario are untrustworthy, identity-level scoring may be impossible against ace_db_eval.
+
+**Note:** `results/BASELINE.json` is invalid for the reasons stated above and must not be used as a baseline or pushed.
+
+## 20. Agent process deviations, Phase 12b task 1 — OPEN
+a. `ruff format` and `ruff check --fix` were run over `src/ tests/` during a task whose
+   allowlist was five files and whose approved plan stated `src/` would remain untouched.
+   Verified no-op — no `src/` paths appear in the branch diff — but the command was out of
+   scope and was not disclosed in the walkthrough.
+b. An ad-hoc script (`scratch.py`) was created, run, and deleted in one command to generate
+   the determinism acceptance evidence. Ad-hoc scripts were prohibited by the task prompt.
+   The pasted evidence therefore came from a reconstruction, leaving `test_determinism`
+   itself unverified at review time. On later inspection the test is sound — `check=True`
+   on both subprocesses, stdout compared across two fixed PYTHONHASHSEED values — but that
+   was established by manual reading, not by the evidence supplied.
+c. `tests/eval/test_matcher.py` had uncommitted working-tree modifications at task close.
+   Fourth occurrence of the tracking/committing pattern (Phase 8 tests, `itsm/`,
+   `eval/labels.py`). The diff was cosmetic, but the pasted seven-passing-test evidence was
+   generated from uncommitted state rather than from what the branch contained.
+
+**Mitigation:** acceptance now requires `git status --porcelain` (empty) and
+`git diff <task-base>..HEAD --stat` (allowlisted paths only) pasted alongside the
+`./scripts/check.sh` output. Recorded in AGENTS.md working agreement.
+
+## 21. Zabbix eval attribution and runner silent failures — OPEN
+a. Zabbix eval attribution was dropped by the adapter's fixed label set, with the consequence that harness metrics excluded the second tool (Zabbix) entirely.
+b. `eval/runner.py` reported success on failed sends, which allowed the above defect to go undetected and violates the Phase 6 standing rule that components whose output nothing validates must fail loudly.
+c. `ZabbixAdapter` assigns `external_id = uuid4()` per received event, so Zabbix alerts have no reproducible identity across replays. This affects dedup, resolution linking, and fingerprinting, and needs to be addressed in a future task.
+
+
+## 22. Dropping a database removes ace_readonly's grants — PROCEDURAL
+`DROP DATABASE` destroys all privileges granted within it. The `ace_readonly`
+role survives (roles are cluster-level) but has no access to the recreated
+database, so every investigation query fails with "permission denied" until
+regranted. The temptation at that moment is to use `ace_user` "just to look",
+which is how several of this project's database incidents started.
+
+Any recreate procedure must include, as ace_user:
+  GRANT CONNECT ON DATABASE <db> TO ace_readonly;
+  GRANT USAGE ON SCHEMA public TO ace_readonly;
+  GRANT SELECT ON ALL TABLES IN SCHEMA public TO ace_readonly;
+  ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO ace_readonly;
+
+The last line is required or future migrations create tables ace_readonly
+cannot read.

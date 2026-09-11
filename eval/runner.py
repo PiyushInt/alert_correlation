@@ -3,13 +3,16 @@ import json
 import logging
 import os
 import subprocess
+import sys
 import time
 import uuid
+from typing import Any
+
 import yaml
 import httpx
 from datetime import datetime, UTC
 from sqlalchemy import create_engine, text
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import Session, sessionmaker
 
 # Setup basic logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -26,7 +29,7 @@ SessionLocal = sessionmaker(bind=engine)
 
 API_URL = "http://localhost:8000/webhooks"
 
-def query_incidents_for_run(db, run_id):
+def query_incidents_for_run(db: Session, run_id: str) -> list[dict[str, Any]]:
     """
     Finds all incidents that contain at least one alert with ace_eval_run_id == run_id.
     Returns a list of dicts representing the incident structure.
@@ -39,7 +42,7 @@ def query_incidents_for_run(db, run_id):
         WHERE a.labels->>'ace_eval_run_id' = :run_id
            OR a.raw_payload->>'ace_eval_run_id' = :run_id
     """)
-    incidents = []
+    incidents: list[dict[str, Any]] = []
     rows = db.execute(sql, {"run_id": run_id}).fetchall()
     
     for row in rows:
@@ -71,20 +74,31 @@ def query_incidents_for_run(db, run_id):
     incidents.sort(key=lambda x: (x["member_count"], ",".join(x["source_tools"])))
     return incidents
 
-def inject_run_id(payload_dict, source_tool, run_id):
+def inject_run_id(
+    payload_dict: dict[str, Any], source_tool: str, run_id: str, scenario_name: str
+) -> dict[str, Any]:
+    """
+    Injects ace_eval_run_id and ace_eval_scenario into the payload.
+    For zabbix, we have to put it in the top level.
+    For prometheus/blackbox, we put it in labels.
+    """
     if source_tool in ("prometheus", "blackbox"):
         if "labels" not in payload_dict:
             payload_dict["labels"] = {}
         payload_dict["labels"]["ace_eval_run_id"] = run_id
-    elif source_tool == "zabbix":
+        payload_dict["labels"]["ace_eval_scenario"] = scenario_name
+    else:
         payload_dict["ace_eval_run_id"] = run_id
+        payload_dict["ace_eval_scenario"] = scenario_name
     return payload_dict
 
-def run_capture(scenario_file, scenario_data):
+def run_capture(scenario_file: str, scenario_data: dict[str, Any]) -> str | None:
     run_id = str(uuid.uuid4())
     logger.info(f"--- Starting CAPTURE Mode (run_id: {run_id}) ---")
     
     fault_script = scenario_data.get("fault_script")
+    if fault_script is None:
+        raise ValueError("scenario missing required 'fault_script'")
     args = scenario_data.get("arguments", [])
     duration = scenario_data.get("duration_seconds", 300)
     
@@ -141,9 +155,9 @@ def run_capture(scenario_file, scenario_data):
     logger.info(f"Capture written to {capture_file}")
     return capture_file
 
-def run_replay(capture_file):
+def run_replay(capture_file: str, scenario_name: str) -> list[dict[str, Any]]:
     run_id = str(uuid.uuid4())
-    logger.info(f"--- Starting REPLAY Mode (run_id: {run_id}) ---")
+    logger.info(f"--- Starting REPLAY Mode (run_id: {run_id}, scenario: {scenario_name}) ---")
     
     # Wait for the correlation window to elapse to ensure replay isolation.
     # We use a fixed sleep because we cannot rely on incidents from prior runs 
@@ -159,6 +173,8 @@ def run_replay(capture_file):
     logger.info(f"Loaded {len(payloads)} payloads for replay.")
     
     last_received_at = None
+    failed_sends = 0
+    total_sends = len(payloads)
     
     for p in payloads:
         source_tool = p["source_tool"]
@@ -175,8 +191,8 @@ def run_replay(capture_file):
                 
         last_received_at = current_received_at
         
-        # Inject run_id
-        raw = inject_run_id(raw, source_tool, run_id)
+        # Inject run_id and scenario_name
+        raw = inject_run_id(raw, source_tool, run_id, scenario_name)
         
         # Wrap for Prometheus/Blackbox
         if source_tool in ("prometheus", "blackbox"):
@@ -197,11 +213,17 @@ def run_replay(capture_file):
         try:
             r = httpx.post(url, json=raw, timeout=5.0)
             if r.status_code not in (200, 202):
-                logger.error(f"Failed to post {source_tool} payload: {r.status_code} {r.text}")
+                logger.error(f"Failed to post {source_tool} payload to {url}: {r.status_code} {r.text}")
+                failed_sends += 1
             else:
                 logger.info(f"Successfully posted {source_tool} payload")
         except Exception as e:
-            logger.error(f"Exception posting payload: {e}")
+            logger.error(f"Exception posting {source_tool} payload to {url}: {e}")
+            failed_sends += 1
+            
+    if failed_sends > 0:
+        logger.error(f"FATAL: {failed_sends} out of {total_sends} payloads failed to send. Aborting run.")
+        sys.exit(1)
         
     # Wait for pipeline to settle
     wait_time = 305  # CORRELATION_WINDOW is 300s
@@ -215,11 +237,12 @@ def run_replay(capture_file):
     logger.info(f"Replay {run_id} produced {len(incidents)} incidents.")
     return incidents
 
-def main():
+def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--scenario", required=True, help="Path to scenario YAML (e.g. cascade/disk_fill)")
     parser.add_argument("--capture", action="store_true", help="Run capture mode")
     parser.add_argument("--replay", action="store_true", help="Run replay mode")
+    parser.add_argument("--holdout", action="store_true", help="Allow running hold-out scenarios")
     
     args = parser.parse_args()
     
@@ -227,8 +250,12 @@ def main():
     scenario_file = args.scenario
     if not scenario_file.endswith(".yaml"):
         scenario_file += ".yaml"
-    if not scenario_file.startswith("eval/scenarios/"):
+    if not scenario_file.startswith("eval/scenarios/") and not scenario_file.startswith("eval/holdout/"):
         scenario_file = os.path.join("eval/scenarios", scenario_file)
+        
+    if "eval/holdout/" in scenario_file and not args.holdout:
+        logger.error(f"Refusing to run holdout scenario {scenario_file} without --holdout flag.")
+        sys.exit(1)
         
     with open(scenario_file, "r") as f:
         scenario_data = yaml.safe_load(f)
@@ -250,8 +277,9 @@ def main():
             logger.error(f"Capture file {capture_file} not found. Run --capture first.")
             return
             
-        incidents_run1 = run_replay(capture_file)
-        incidents_run2 = run_replay(capture_file)
+        scenario_name = os.path.splitext(os.path.basename(scenario_file))[0]
+        incidents_run1 = run_replay(capture_file, scenario_name)
+        incidents_run2 = run_replay(capture_file, scenario_name)
         
         # Compare structural equality
         logger.info("--- Comparing Replays ---")
@@ -269,9 +297,9 @@ def main():
         gt_incidents = len(expected_incidents_list) if isinstance(expected_incidents_list, list) else 0
         
         if len(incidents_run1) == gt_incidents:
-            logger.info(f"GROUND TRUTH MATCH: Found {gt_incidents} incidents as expected.")
+            logger.info(f"[SMOKE TEST] MATCH: Found {gt_incidents} incidents as expected.")
         else:
-            logger.error(f"GROUND TRUTH MISMATCH: Expected {gt_incidents} incidents, got {len(incidents_run1)}.")
+            logger.error(f"[SMOKE TEST] MISMATCH: Expected {gt_incidents} incidents, got {len(incidents_run1)}.")
 
 if __name__ == "__main__":
     main()

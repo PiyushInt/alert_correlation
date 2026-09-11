@@ -1,0 +1,12 @@
+id: holdout_cascade_valkey_kill
+family: cascade
+fault_script: ./estate/chaos/kill_service.sh
+arguments: ["valkey"]
+duration_seconds: 350
+ground_truth:
+  expected_incidents:
+    - description: valkey service killed
+      firing_alerts: 4
+      resolved_alerts: 4
+      tools: [prometheus, blackbox]
+      true_cause_component: valkey

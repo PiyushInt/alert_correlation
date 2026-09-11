@@ -114,17 +114,22 @@ class ZabbixAdapter(BaseAdapter):
                 f"Component unresolved for alert {external_id} (alias attempted: {alias_to_lookup})"
             )
 
+        labels = {
+            "host": alert_data.get("host", ""),
+            "item_key": alert_data.get("item_key", ""),
+            "severity": alert_data.get("severity", ""),
+        }
+        for k, v in alert_data.items():
+            if k.startswith("ace_eval_"):
+                labels[k] = str(v)
+
         alert = NormalisedAlert(
             source_tool="zabbix",
             external_id=external_id,
             severity=severity,
             component_id=component_id,
             component_unresolved=component_unresolved,
-            labels={
-                "host": alert_data.get("host", ""),
-                "item_key": alert_data.get("item_key", ""),
-                "severity": alert_data.get("severity", ""),
-            },
+            labels=labels,
             annotations={
                 "summary": alert_data.get("trigger_name", ""),
                 "value": alert_data.get("item_value", ""),

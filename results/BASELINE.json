@@ -1,0 +1,37 @@
+{
+  "families": {
+    "adversarial": {
+      "noise_reduction": 0.6,
+      "grouping_precision": 0.8,
+      "grouping_recall": 1.0,
+      "over_merge_rate": 0.5,
+      "root_cause_top3_rate": 0.5,
+      "unresolved_component_rate": 0.0,
+      "scenarios_scored": 1,
+      "cross_tool_grouping": "Yes",
+      "added_latency": 25434.761359
+    },
+    "cascade": {
+      "noise_reduction": 0.4166666666666667,
+      "grouping_precision": 1.0,
+      "grouping_recall": 1.0,
+      "over_merge_rate": 0.0,
+      "root_cause_top3_rate": 0.5,
+      "unresolved_component_rate": 0.0,
+      "scenarios_scored": 2,
+      "cross_tool_grouping": "Yes",
+      "added_latency": "NOT MEASURED"
+    },
+    "offgraph": {
+      "noise_reduction": 0.0,
+      "grouping_precision": 1.0,
+      "grouping_recall": 1.0,
+      "over_merge_rate": 0.0,
+      "root_cause_top3_rate": 1.0,
+      "unresolved_component_rate": 0.0,
+      "scenarios_scored": 1,
+      "cross_tool_grouping": "No",
+      "added_latency": "NOT MEASURED"
+    }
+  }
+}

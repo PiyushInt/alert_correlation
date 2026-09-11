@@ -1,0 +1,12 @@
+id: holdout_cascade_cart_valkey
+family: cascade
+fault_script: ./estate/chaos/fill_disk.sh
+arguments: ["cart"]
+duration_seconds: 400
+ground_truth:
+  expected_incidents:
+    - description: disk fill on cart
+      firing_alerts: 2
+      resolved_alerts: 2
+      tools: [prometheus, zabbix]
+      true_cause_component: cart
